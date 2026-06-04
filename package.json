@@ -2,7 +2,7 @@
   "name": "grid-vault",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@11.1.3",
+  "packageManager": "pnpm@11.5.0+sha512.dbfcc4f81cf48597afd4bc391ffdf12c11f1a9fb83a395bfa6b0a2d9cc2fd8ffebafdb1ccbd529632153f793904c2615b7f09fe1a345473fd1c35845172a8eb1",
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
@@ -11,18 +11,27 @@
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "prepare": "husky"
+    "prepare": "husky",
+    "drizzle:generate": "drizzle-kit generate",
+    "drizzle:push": "drizzle-kit push --verbose",
+    "drizzle:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@nuxt/eslint": "1.15.2",
+    "drizzle-orm": "^0.45.2",
     "nuxt": "^4.4.6",
+    "nuxt-auth-utils": "0.5.29",
+    "postgres": "^3.4.9",
     "vue": "^3.5.34",
-    "vue-router": "^5.0.7"
+    "vue-router": "^5.0.7",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.0.0",
     "@commitlint/cli": "^21.0.1",
     "@commitlint/config-conventional": "^21.0.1",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^10.4.0",
     "eslint-plugin-format": "^2.0.1",
     "husky": "^9.1.7",
