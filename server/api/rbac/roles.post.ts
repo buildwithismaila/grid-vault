@@ -1,6 +1,5 @@
 import { z } from 'zod'
-import { role } from '../../db/schema/rbac'
-import { validateBody } from '../../utils/validate'
+import { role } from '#server/db/schema/rbac'
 
 const createRoleSchema = z.object({
   name: z.string().min(1).max(100).trim(),
@@ -8,7 +7,7 @@ const createRoleSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  await requirePermission(event, 'setting:create')
+  await requirePermission(event, 'user:update')
 
   const body = await validateBody(event, createRoleSchema)
   const db = useDb()
@@ -18,5 +17,6 @@ export default defineEventHandler(async (event) => {
     description: body.description,
   }).returning()
 
+  await invalidateCache('rbac-roles')
   return created
 })

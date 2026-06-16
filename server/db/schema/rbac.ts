@@ -22,10 +22,10 @@ export const role = pgTable('role', {
 
 export const rolePermission = pgTable('role_permission', {
   id: uuid().defaultRandom().primaryKey(),
-  roleId: uuid('role_id')
+  roleId: uuid()
     .notNull()
     .references(() => role.id, { onDelete: 'cascade' }),
-  permissionId: uuid('permission_id')
+  permissionId: uuid()
     .notNull()
     .references(() => permission.id, { onDelete: 'cascade' }),
 }, t => [
@@ -34,10 +34,10 @@ export const rolePermission = pgTable('role_permission', {
 
 export const userRole = pgTable('user_role', {
   id: uuid().defaultRandom().primaryKey(),
-  userId: uuid('user_id')
+  userId: uuid()
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
-  roleId: uuid('role_id')
+  roleId: uuid()
     .notNull()
     .references(() => role.id, { onDelete: 'cascade' }),
 }, t => [

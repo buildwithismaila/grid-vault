@@ -1,7 +1,20 @@
-import { timestamp } from 'drizzle-orm/pg-core'
-import { sql } from 'drizzle-orm/sql/sql'
+import { sql } from 'drizzle-orm'
+import { timestamp, uuid } from 'drizzle-orm/pg-core'
 
 export const timestamps = {
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => sql`now()`),
+  createdAt: timestamp({ withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+  updatedAt: timestamp({ withTimezone: true })
+    .notNull()
+    .default(sql`now()`)
+    .$onUpdate(() => new Date()),
+}
+
+/**
+ * Soft-delete columns. No hard deletes on asset/substation records.
+ */
+export const softDelete = {
+  deletedAt: timestamp({ withTimezone: true }),
+  deletedBy: uuid(),
 }

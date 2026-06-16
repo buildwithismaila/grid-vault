@@ -575,7 +575,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'USER'"
+          "default": "'User'"
         },
         "status": {
           "name": "status",
@@ -753,11 +753,11 @@
       "name": "role_enum",
       "schema": "public",
       "values": [
-        "SUPERADMIN",
-        "ADMIN",
-        "REVIEWER",
-        "EDITOR",
-        "USER"
+        "Superadmin",
+        "Admin",
+        "Reviewer",
+        "Editor",
+        "User"
       ]
     },
     "public.user_status": {

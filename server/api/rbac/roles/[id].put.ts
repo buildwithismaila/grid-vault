@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { role } from '../../../../db/schema/rbac'
+import { role } from '#server/db/schema/rbac'
 
 const updateRoleSchema = z.object({
   name: z.string().min(1).max(100).trim().optional(),
@@ -8,7 +8,7 @@ const updateRoleSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  await requirePermission(event, 'setting:update')
+  await requirePermission(event, 'user:update')
   const id = getRouterParam(event, 'id')
   if (!id)
     throw createError({ statusCode: 400, statusMessage: 'Missing role id' })
@@ -27,5 +27,6 @@ export default defineEventHandler(async (event) => {
     .where(eq(role.id, id))
     .returning()
 
+  await invalidateCache('rbac-roles')
   return updated
 })

@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   const [superadmin] = await db
     .select({ id: user.id })
     .from(user)
-    .where(eq(user.role, 'SUPERADMIN'))
+    .where(eq(user.role, 'Superadmin'))
     .limit(1)
 
   if (superadmin) {
@@ -18,5 +18,9 @@ export default defineEventHandler(async (event) => {
   }
 
   await seedRbac()
+  await Promise.all([
+    invalidateCache('rbac-roles'),
+    invalidateCache('rbac-permissions'),
+  ])
   return { success: true, message: 'RBAC seeded successfully' }
 })

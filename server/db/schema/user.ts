@@ -1,19 +1,16 @@
 import { relations } from 'drizzle-orm'
-import { pgEnum, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
 import { passwordResetToken } from './auth'
 import { timestamps } from './columns.helpers'
+import { systemRoleEnum, userStatusEnum } from './enums'
 import { jobRole, orgUnit } from './org'
-
-export const roleEnum = pgEnum('role_enum', ['SUPERADMIN', 'ADMIN', 'REVIEWER', 'EDITOR', 'USER'])
-
-export const userStatusEnum = pgEnum('user_status', ['ACTIVE', 'INACTIVE', 'PENDING'])
 
 export const user = pgTable('user', {
   id: uuid().primaryKey().defaultRandom(),
   name: varchar({ length: 255 }),
   payrollId: varchar({ length: 6 }).unique(),
   avatarUrl: varchar({ length: 255 }),
-  role: roleEnum().notNull().default('USER'),
+  role: systemRoleEnum().notNull().default('Viewer'),
   status: userStatusEnum().notNull().default('PENDING'),
   locationId: uuid().references(() => orgUnit.id, { onDelete: 'set null' }),
   jobRoleId: uuid().references(() => jobRole.id, { onDelete: 'set null' }),
@@ -26,8 +23,8 @@ export const userInvitation = pgTable('user_invitation', {
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
   invitedByUserId: uuid('invited_by_user_id') // which admin sent the invite
-    .notNull()
     .references(() => user.id, { onDelete: 'set null' }),
+  email: varchar({ length: 255 }).notNull(),
   tokenHash: text('token_hash').notNull().unique(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   acceptedAt: timestamp('accepted_at', { withTimezone: true }), // null = pending

@@ -1,0 +1,37 @@
+import { eq } from 'drizzle-orm'
+import { auth, passwordResetToken } from '#server/db/schema/auth'
+import { user } from '#server/db/schema/user'
+import { AUTH } from '#shared/utils/constants'
+
+export default defineEventHandler(async (event) => {
+  await requirePermission(event, 'user:update')
+  const id = getRouterParam(event, 'id')
+  if (!id)
+    throw createError({ statusCode: 400, statusMessage: 'Missing user id' })
+
+  const db = useDb()
+
+  const [existingUser] = await db.select().from(user).where(eq(user.id, id)).limit(1)
+  if (!existingUser)
+    throw createError({ statusCode: 404, statusMessage: 'User not found' })
+  if (existingUser.role === 'Superadmin')
+    throw createError({ statusCode: 400, statusMessage: 'Cannot reset Superadmin password' })
+
+  const [existingAuth] = await db.select().from(auth).where(eq(auth.userId, id)).limit(1)
+  if (!existingAuth)
+    throw createError({ statusCode: 400, statusMessage: 'User has no auth record' })
+
+  const { rawToken, tokenHash } = generateToken()
+
+  await db.insert(passwordResetToken).values({
+    userId: id,
+    tokenHash,
+    expiresAt: new Date(Date.now() + AUTH.RESET_TOKEN_EXPIRY_MS),
+  })
+
+  return {
+    success: true,
+    message: 'Password reset link generated',
+    ...(import.meta.dev && { token: rawToken }),
+  }
+})

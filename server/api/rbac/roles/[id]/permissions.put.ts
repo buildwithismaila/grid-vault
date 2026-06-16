@@ -4,11 +4,11 @@ import { role, rolePermission } from '#server/db/schema/rbac'
 import { validateBody } from '#server/utils/validate'
 
 const setPermissionsSchema = z.object({
-  permissionIds: z.array(z.uuid()),
+  permissionIds: z.array(z.string().uuid()),
 })
 
 export default defineEventHandler(async (event) => {
-  await requirePermission(event, 'setting:update')
+  await requirePermission(event, 'user:update')
   const id = getRouterParam(event, 'id')
   if (!id)
     throw createError({ statusCode: 400, statusMessage: 'Missing role id' })
@@ -32,5 +32,6 @@ export default defineEventHandler(async (event) => {
     )
   }
 
+  await invalidateCache('rbac-roles')
   return { success: true }
 })

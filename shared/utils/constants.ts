@@ -1,0 +1,6 @@
+export const AUTH = {
+  MAX_LOGIN_ATTEMPTS: 5,
+  LOCKOUT_DURATION_MS: 15 * 60 * 1000,
+  RESET_TOKEN_EXPIRY_MS: 60 * 60 * 1000,
+  INVITE_EXPIRY_MS: 7 * 24 * 60 * 60 * 1000,
+} as const

@@ -1,4 +1,4 @@
-export const RESOURCES = ['user', 'org_unit', 'job_role'] as const
+export const RESOURCES = ['user', 'org_unit', 'job_role', 'inventory', 'asset', 'report'] as const
 
 export const ACTIONS = ['create', 'read', 'update', 'delete'] as const
 
@@ -18,6 +18,18 @@ export const PERMISSIONS = {
   JOB_ROLE_READ: 'job_role:read',
   JOB_ROLE_UPDATE: 'job_role:update',
   JOB_ROLE_DELETE: 'job_role:delete',
+  INVENTORY_CREATE: 'inventory:create',
+  INVENTORY_READ: 'inventory:read',
+  INVENTORY_UPDATE: 'inventory:update',
+  INVENTORY_DELETE: 'inventory:delete',
+  ASSET_CREATE: 'asset:create',
+  ASSET_READ: 'asset:read',
+  ASSET_UPDATE: 'asset:update',
+  ASSET_DELETE: 'asset:delete',
+  REPORT_CREATE: 'report:create',
+  REPORT_READ: 'report:read',
+  REPORT_UPDATE: 'report:update',
+  REPORT_DELETE: 'report:delete',
 } as const
 
 export type PermissionName = typeof PERMISSIONS[keyof typeof PERMISSIONS]

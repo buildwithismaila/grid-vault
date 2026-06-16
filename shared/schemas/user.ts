@@ -42,16 +42,15 @@ export const changePasswordSchema = z.object({
 
 export const sendInviteSchema = z.object({
   email: emailSchema,
-  role: z.enum(['ADMIN', 'EDITOR', 'REVIEWER', 'USER'], 'Role must be one of ADMIN, EDITOR, REVIEWER, USER'),
+  role: z.enum(['Admin', 'HQ Asset Manager', 'Regional Technical Manager', 'Technical Manager', 'Service Centre Technician', 'Finance Officer', 'Stores Officer', 'Auditor', 'Viewer'], 'Invalid role'),
+  name: z.string().min(1).max(255).trim().optional(),
+  payrollId: z.string().min(1).max(6).trim().optional(),
+  locationId: z.string().uuid().optional(),
+  jobRoleId: z.string().uuid().optional(),
 })
 
 export const acceptInviteSchema = z.object({
   token: z.string('Token is required').min(1),
-  name: z
-    .string('Name is required')
-    .min(2, 'Name must be at least 2 characters')
-    .max(100, 'Name must be under 100 characters')
-    .trim(),
   password: passwordSchema,
   confirmPassword: passwordSchema,
 }).refine(d => d.password === d.confirmPassword, {

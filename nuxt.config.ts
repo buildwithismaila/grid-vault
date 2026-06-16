@@ -9,16 +9,33 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
     'nuxt-auth-utils',
+    '@nuxt/ui',
+    'nuxt-resend',
   ],
   eslint: {
     config: {
       standalone: false,
     },
   },
+  css: ['~/assets/css/main.css'],
   runtimeConfig: {
     postgresUrl: process.env.NUXT_POSTGRES_URL,
     sessionPassword: process.env.NUXT_SESSION_PASSWORD,
     initialEmail: '',
     initialPassword: '',
+    appUrl: process.env.NUXT_APP_URL || 'http://localhost:3000',
+    emailFrom: process.env.NUXT_EMAIL_FROM || 'Grid Vault <onboarding@resend.dev>',
+  },
+  resend: {
+    apiKey: process.env.NUXT_RESEND_API_KEY,
+  },
+  vite: {
+    optimizeDeps: {
+      include: [
+        '@tanstack/vue-table',
+        'qrcode',
+        'zod',
+      ],
+    },
   },
 })

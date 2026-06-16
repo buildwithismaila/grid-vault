@@ -15,7 +15,7 @@ export default defineNitroPlugin(async () => {
     const [newUser] = await tx.insert(user).values({
       name: 'Super Admin',
       payrollId: '000001',
-      role: 'SUPERADMIN',
+      role: 'Superadmin',
       status: 'ACTIVE',
     }).returning({ id: user.id })
     if (!newUser) {
@@ -28,5 +28,5 @@ export default defineNitroPlugin(async () => {
     })
   })
   // eslint-disable-next-line no-console
-  console.log('✅ SUPERADMIN created:', config.initialEmail)
+  console.log('✅ Superadmin created:', config.initialEmail)
 })

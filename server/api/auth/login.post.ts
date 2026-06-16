@@ -3,43 +3,38 @@ import { auth } from '#server/db/schema/auth'
 import { role, userRole } from '#server/db/schema/rbac'
 import { user } from '#server/db/schema/user'
 import { loginSchema } from '#shared/schemas/user'
+import { AUTH } from '#shared/utils/constants'
 
 export default defineEventHandler(async (event) => {
   const { email, password } = await validateBody(event, loginSchema)
   const db = useDb()
 
   const [row] = await db
-    .select({
-      auth,
-      user,
-    })
+    .select({ auth, user })
     .from(auth)
     .where(eq(auth.email, email))
     .innerJoin(user, eq(auth.userId, user.id))
     .limit(1)
 
-  if (!row) {
+  if (!row)
     throw createError({ statusCode: 401, statusMessage: 'Invalid credentials' })
-  }
 
-  if (row.auth.lockedUntil && row.auth.lockedUntil > new Date()) {
+  if (row.auth.lockedUntil && row.auth.lockedUntil > new Date())
     throw createError({ statusCode: 423, statusMessage: 'Account is locked' })
-  }
 
   const valid = await verifyPassword(row.auth.passwordHash, password)
   if (!valid) {
     const newAttempts = row.auth.failedLoginAttempts + 1
     const updateData: Record<string, unknown> = { failedLoginAttempts: newAttempts }
-    if (newAttempts >= 5) {
-      updateData.lockedUntil = new Date(Date.now() + 15 * 60 * 1000)
-    }
+    if (newAttempts >= AUTH.MAX_LOGIN_ATTEMPTS)
+      updateData.lockedUntil = new Date(Date.now() + AUTH.LOCKOUT_DURATION_MS)
+
     await db.update(auth).set(updateData).where(eq(auth.id, row.auth.id))
     throw createError({ statusCode: 401, statusMessage: 'Invalid credentials' })
   }
 
-  if (row.user.status !== 'ACTIVE') {
+  if (row.user.status !== 'ACTIVE')
     throw createError({ statusCode: 403, statusMessage: 'Account is not active' })
-  }
 
   await db.update(auth).set({
     failedLoginAttempts: 0,
@@ -47,10 +42,15 @@ export default defineEventHandler(async (event) => {
     lastLoginAt: sql`now()`,
   }).where(eq(auth.id, row.auth.id))
 
+  if (row.auth.mfaEnabled) {
+    const mfaToken = createMfaChallenge(row.auth.userId)
+    return { mfaRequired: true, mfaToken }
+  }
+
   let permissions: string[] = []
   let roles: string[] = []
 
-  if (row.user.role !== 'SUPERADMIN') {
+  if (row.user.role !== 'Superadmin') {
     const userRoles = await db
       .select({ name: role.name })
       .from(userRole)
@@ -66,6 +66,7 @@ export default defineEventHandler(async (event) => {
     payrollId: row.user.payrollId ?? '',
     email: row.auth.email,
     name: row.user.name ?? '',
+    avatarUrl: row.user.avatarUrl ?? '',
     role: row.user.role,
     locationId: row.user.locationId ?? '',
     permissions,

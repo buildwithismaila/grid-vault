@@ -1,5 +1,6 @@
 import { relations } from 'drizzle-orm'
-import { integer, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
+import { boolean, integer, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
+import { timestamps } from './columns.helpers'
 import { user } from './user'
 
 export const auth = pgTable('auth', {
@@ -10,6 +11,9 @@ export const auth = pgTable('auth', {
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   failedLoginAttempts: integer('failed_login_attempts').notNull().default(0),
   lockedUntil: timestamp('locked_until', { withTimezone: true }),
+  mfaSecret: text('mfa_secret'),
+  mfaEnabled: boolean('mfa_enabled').notNull().default(false),
+  ...timestamps,
 })
 
 export const passwordResetToken = pgTable('password_reset_token', {
@@ -30,6 +34,9 @@ export const authRelation = relations(auth, ({ one }) => ({
   }),
 }))
 
-export const passwordResetTokenRelation = relations(passwordResetToken, ({ many }) => ({
-  user: many(user),
+export const passwordResetTokenRelation = relations(passwordResetToken, ({ one }) => ({
+  user: one(user, {
+    fields: [passwordResetToken.userId],
+    references: [user.id],
+  }),
 }))

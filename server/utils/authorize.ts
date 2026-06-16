@@ -1,8 +1,8 @@
 import type { H3Event } from 'h3'
 import { eq } from 'drizzle-orm'
-import { permission, role, rolePermission, userRole } from '../db/schema/rbac'
+import { permission, role, rolePermission, userRole } from '#server/db/schema/rbac'
 
-const SUPERADMIN_ROLE = 'SUPERADMIN'
+const SUPERADMIN_ROLE = 'Superadmin'
 
 /**
  * Fetch all permission names granted to a user via their roles.

@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm'
-import { role } from '#server/db/schema'
+import { role } from '#server/db/schema/rbac'
 
 export default defineEventHandler(async (event) => {
-  await requirePermission(event, 'setting:delete')
+  await requirePermission(event, 'user:update')
   const id = getRouterParam(event, 'id')
   if (!id)
     throw createError({ statusCode: 400, statusMessage: 'Missing role id' })
@@ -16,5 +16,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Cannot delete system roles' })
 
   await db.delete(role).where(eq(role.id, id))
+  await invalidateCache('rbac-roles')
   return { success: true }
 })
