@@ -3,7 +3,7 @@ import postgres from 'postgres'
 
 import * as schema from '../db/schema'
 
-export default defineNitroPlugin((nitroApp) => {
+export default defineNitroPlugin(async (nitroApp) => {
   const { postgresUrl } = useRuntimeConfig()
 
   if (!postgresUrl) {
@@ -14,6 +14,10 @@ export default defineNitroPlugin((nitroApp) => {
   const db = drizzle(client, { schema, casing: 'snake_case' })
 
   nitroApp.db = db
+
+  if (!import.meta.dev) {
+    await runMigrations(db)
+  }
 
   nitroApp.hooks.hook('close', async () => {
     await client.end()

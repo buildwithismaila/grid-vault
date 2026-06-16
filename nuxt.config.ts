@@ -29,6 +29,12 @@ export default defineNuxtConfig({
   resend: {
     apiKey: process.env.NUXT_RESEND_API_KEY,
   },
+  nitro: {
+    serverAssets: [{
+      baseName: 'migrations',
+      dir: 'server/db/migrations',
+    }],
+  },
   vite: {
     optimizeDeps: {
       include: [
