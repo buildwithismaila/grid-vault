@@ -1,0 +1,2 @@
+ALTER TABLE "role_permission" DROP CONSTRAINT "role_permission_role_id_permissionId_unique";--> statement-breakpoint
+ALTER TABLE "role_permission" ADD CONSTRAINT "role_permission_roleId_permissionId_unique" UNIQUE("role_id","permission_id");

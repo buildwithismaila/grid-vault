@@ -8,7 +8,11 @@ export default withNuxt(
     typescript: true,
     vue: true,
     formatters: true,
+    markdown: false,
     ignores: ['.pnpm-store/**', 'pnpm-lock.yaml', '.husky/**', '.nuxt/**', '**/migrations/*', 'components/ui/*', 'public/*'],
-    rules: {},
+    rules: {
+      'vue/no-multiple-template-root': 'off',
+      'perfectionist/sort-imports': 'off',
+    },
   }),
 )

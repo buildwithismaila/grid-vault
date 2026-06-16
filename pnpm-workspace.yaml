@@ -1,4 +1,11 @@
+shellEmulator: true
+
+trustPolicy: no-downgrade
+
+trustPolicyIgnoreAfter: 1440
+
 allowBuilds:
   '@parcel/watcher': true
   esbuild: true
   unrs-resolver: true
+  vue-demi: true
