@@ -5,7 +5,7 @@ import { user } from './user'
 
 export const auth = pgTable('auth', {
   id: uuid().defaultRandom().primaryKey(),
-  userId: uuid().references(() => user.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid().references(() => user.id, { onDelete: 'cascade' }).notNull().unique(),
   email: varchar({ length: 255 }).notNull().unique(),
   passwordHash: varchar({ length: 255 }).notNull(),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),

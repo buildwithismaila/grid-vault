@@ -36,6 +36,7 @@ const inviting = ref(false)
 
 const editName = ref('')
 const editPayrollId = ref('')
+const editEmail = ref('')
 const editLocationId = ref('')
 const editJobRoleId = ref('')
 const editRole = ref('')
@@ -90,11 +91,10 @@ const columns: TableColumn<UserRow>[] = [
   { id: 'payrollId', accessorKey: 'payrollId', header: 'Payroll ID', enableSorting: true },
   { id: 'name', accessorKey: 'name', header: 'Name', enableSorting: true },
   { id: 'email', accessorKey: 'email', header: 'Email', enableSorting: true },
-  { id: 'role', accessorKey: 'role', header: 'Role', enableSorting: true },
+  { id: 'roles', header: 'Roles' },
   { id: 'status', accessorKey: 'status', header: 'Status', enableSorting: true },
   { id: 'locationName', accessorKey: 'locationName', header: 'Location' },
   { id: 'jobRoleName', accessorKey: 'jobRoleName', header: 'Job Role' },
-  { id: 'customRoles', accessorKey: 'customRoles', header: 'Custom Roles' },
   { id: 'invitedByName', accessorKey: 'invitedByName', header: 'Invited By' },
   { id: 'inviteExpiresAt', accessorKey: 'inviteExpiresAt', header: 'Invite Expires' },
   { id: 'createdAt', accessorKey: 'createdAt', header: 'Created', enableSorting: true },
@@ -137,6 +137,7 @@ function openEdit(user: UserRow) {
   selectedUser.value = user
   editName.value = user.name ?? ''
   editPayrollId.value = user.payrollId ?? ''
+  editEmail.value = user.email
   editLocationId.value = user.locationId ?? ''
   editJobRoleId.value = user.jobRoleId ?? ''
   editRole.value = user.role
@@ -149,16 +150,20 @@ async function saveUser() {
     return
   saving.value = true
   try {
+    const body: Record<string, unknown> = {
+      name: editName.value || undefined,
+      payrollId: editPayrollId.value || undefined,
+      locationId: editLocationId.value || null,
+      jobRoleId: editJobRoleId.value || null,
+      role: editRole.value,
+      status: editStatus.value,
+    }
+    if (editEmail.value !== selectedUser.value.email)
+      body.email = editEmail.value
+
     await $fetch(`/api/admin/users/${selectedUser.value.id}` as const, {
       method: 'PUT',
-      body: {
-        name: editName.value || undefined,
-        payrollId: editPayrollId.value || undefined,
-        locationId: editLocationId.value || null,
-        jobRoleId: editJobRoleId.value || null,
-        role: editRole.value,
-        status: editStatus.value,
-      },
+      body,
     })
     toast.add({ title: 'User updated', color: 'success', icon: 'i-lucide-check-circle' })
     editOpen.value = false
@@ -462,14 +467,6 @@ function getActionItems(user: UserRow) {
         <span v-else class="text-muted">—</span>
       </template>
 
-      <template #role-cell="{ row }">
-        <UBadge
-          :label="row.original.role"
-          :color="row.original.role === 'Superadmin' ? 'warning' : row.original.role === 'Admin' ? 'info' : 'neutral'"
-          variant="subtle"
-        />
-      </template>
-
       <template #status-cell="{ row }">
         <UBadge
           :label="formatEnum(row.original.status)"
@@ -486,19 +483,12 @@ function getActionItems(user: UserRow) {
         <span class="text-muted text-sm">{{ row.original.jobRoleName || '—' }}</span>
       </template>
 
-      <template #customRoles-cell="{ row }">
+      <template #roles-cell="{ row }">
         <div class="flex flex-wrap gap-1">
-          <template v-if="row.original.customRoles.length">
-            <UBadge
-              v-for="role in row.original.customRoles"
-              :key="role"
-              :label="role"
-              color="neutral"
-              variant="subtle"
-              size="sm"
-            />
+          <UBadge :label="row.original.role" color="primary" variant="solid" size="sm" />
+          <template v-for="role in row.original.customRoles" :key="role">
+            <UBadge :label="role" color="neutral" variant="subtle" size="sm" />
           </template>
-          <span v-else class="text-xs text-muted">—</span>
         </div>
       </template>
 
@@ -617,6 +607,9 @@ function getActionItems(user: UserRow) {
         </UFormField>
         <UFormField name="edit-payroll-id" label="Payroll ID">
           <UInput v-model="editPayrollId" maxlength="6" class="w-full" />
+        </UFormField>
+        <UFormField name="edit-email" label="Email">
+          <UInput v-model="editEmail" type="email" class="w-full" />
         </UFormField>
         <div class="grid grid-cols-2 gap-4">
           <UFormField name="edit-location" label="Location">

@@ -1,0 +1,1 @@
+ALTER TABLE "auth" ADD CONSTRAINT "auth_userId_unique" UNIQUE("user_id");

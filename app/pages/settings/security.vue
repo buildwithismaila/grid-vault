@@ -75,6 +75,7 @@ const mfaVerifyCode = ref('')
 const mfaVerifyLoading = ref(false)
 const mfaSetupError = ref('')
 const mfaDisablePassword = ref('')
+const mfaDisableCode = ref('')
 const mfaDisableLoading = ref(false)
 const mfaDisableError = ref('')
 
@@ -145,11 +146,12 @@ async function disableMfa() {
   try {
     await $fetch('/api/auth/mfa/disable', {
       method: 'POST',
-      body: { password: mfaDisablePassword.value },
+      body: { password: mfaDisablePassword.value, code: mfaDisableCode.value },
     })
     toast.add({ title: 'MFA disabled', color: 'success' })
     mfaDisableOpen.value = false
     mfaDisablePassword.value = ''
+    mfaDisableCode.value = ''
     await refreshMfa()
   }
   catch (err: any) {
@@ -339,18 +341,26 @@ async function disableMfa() {
             Disable Two-Factor Authentication
           </h3>
           <p class="text-sm text-muted text-center">
-            Enter your password to confirm
+            Enter your password and an authentication code to confirm
           </p>
           <UAlert v-if="mfaDisableError" color="error" variant="soft" :title="mfaDisableError" icon="i-lucide-alert-circle" />
           <UFormField name="password" label="Password" required>
             <UInput v-model="mfaDisablePassword" type="password" placeholder="Enter your password" class="w-full" />
+          </UFormField>
+          <UFormField name="code" label="Authentication code" required>
+            <UInput
+              v-model="mfaDisableCode"
+              placeholder="000000"
+              maxlength="6"
+              class="w-full text-center text-xl tracking-widest"
+            />
           </UFormField>
         </div>
       </template>
 
       <template #footer>
         <div class="flex justify-end gap-2">
-          <UButton color="neutral" variant="soft" label="Cancel" @click="mfaDisableOpen = false; mfaDisablePassword = ''; mfaDisableError = ''" />
+          <UButton color="neutral" variant="soft" label="Cancel" @click="mfaDisableOpen = false; mfaDisablePassword = ''; mfaDisableCode = ''; mfaDisableError = ''" />
           <UButton color="error" label="Disable MFA" :loading="mfaDisableLoading" @click="disableMfa" />
         </div>
       </template>
