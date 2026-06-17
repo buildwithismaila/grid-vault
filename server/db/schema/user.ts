@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm'
-import { pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
+import { index, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
 import { passwordResetToken } from './auth'
 import { timestamps } from './columns.helpers'
 import { systemRoleEnum, userStatusEnum } from './enums'
@@ -15,7 +15,10 @@ export const user = pgTable('user', {
   locationId: uuid().references(() => orgUnit.id, { onDelete: 'set null' }),
   jobRoleId: uuid().references(() => jobRole.id, { onDelete: 'set null' }),
   ...timestamps,
-})
+}, t => [
+  index('user_status_idx').on(t.status),
+  index('user_role_idx').on(t.role),
+])
 
 export const userInvitation = pgTable('user_invitation', {
   id: uuid('id').primaryKey().defaultRandom(),

@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
   }).where(eq(auth.id, row.auth.id))
 
   if (row.auth.mfaEnabled) {
-    const mfaToken = createMfaChallenge(row.auth.userId)
+    const mfaToken = await createMfaChallenge(row.auth.userId)
     return { mfaRequired: true, mfaToken }
   }
 

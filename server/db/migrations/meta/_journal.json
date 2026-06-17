@@ -57,6 +57,13 @@
       "when": 1781734164517,
       "tag": "0007_yielding_living_mummy",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781735335736,
+      "tag": "0008_concerned_cyclops",
+      "breakpoints": true
     }
   ]
 }

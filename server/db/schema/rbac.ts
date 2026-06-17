@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm'
-import { boolean, pgTable, timestamp, unique, uuid, varchar } from 'drizzle-orm/pg-core'
+import { boolean, index, pgTable, timestamp, unique, uuid, varchar } from 'drizzle-orm/pg-core'
 import { timestamps } from './columns.helpers'
 import { user } from './user'
 
@@ -30,6 +30,7 @@ export const rolePermission = pgTable('role_permission', {
     .references(() => permission.id, { onDelete: 'cascade' }),
 }, t => [
   unique().on(t.roleId, t.permissionId),
+  index('role_permission_role_id_idx').on(t.roleId),
 ])
 
 export const userRole = pgTable('user_role', {
@@ -42,6 +43,7 @@ export const userRole = pgTable('user_role', {
     .references(() => role.id, { onDelete: 'cascade' }),
 }, t => [
   unique().on(t.userId, t.roleId),
+  index('user_role_user_id_idx').on(t.userId),
 ])
 
 export const permissionRelations = relations(permission, ({ many }) => ({

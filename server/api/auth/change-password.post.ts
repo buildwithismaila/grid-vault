@@ -29,5 +29,12 @@ export default defineEventHandler(async (event) => {
     .set({ passwordHash })
     .where(eq(auth.id, existing.id))
 
+  // Rotate session: clear current session and re-authenticate
+  const session = await getUserSession(event)
+  await clearUserSession(event)
+  if (session.user) {
+    await setUserSession(event, { user: session.user })
+  }
+
   return { success: true }
 })

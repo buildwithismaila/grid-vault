@@ -16,6 +16,15 @@ export const auth = pgTable('auth', {
   ...timestamps,
 })
 
+export const mfaChallenge = pgTable('mfa_challenge', {
+  id: uuid().defaultRandom().primaryKey(),
+  userId: uuid().notNull().references(() => user.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  consumedAt: timestamp('consumed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
 export const passwordResetToken = pgTable('password_reset_token', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id')

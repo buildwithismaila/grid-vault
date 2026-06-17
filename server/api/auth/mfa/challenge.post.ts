@@ -11,7 +11,7 @@ const challengeSchema = z.object({
 
 export default defineEventHandler(async (event) => {
   const { mfaToken, code } = await validateBody(event, challengeSchema)
-  const userId = consumeMfaChallenge(mfaToken)
+  const userId = await consumeMfaChallenge(mfaToken)
   if (!userId)
     throw createError({ statusCode: 400, statusMessage: 'Invalid or expired MFA challenge' })
 
