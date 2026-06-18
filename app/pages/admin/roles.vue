@@ -282,8 +282,7 @@ function someSelectedInResource(ids: string[], resource: string) {
       :loading="rolesLoading"
     >
       <template #badge-cell="{ row }">
-        <UBadge v-if="row.original.isSystem" label="System" color="neutral" variant="subtle" size="sm" />
-        <span v-else-if="(row.original.permissionIds?.length || 0) > 0" class="text-xs text-muted">{{ row.original.permissionIds.length }} perm</span>
+        <span v-if="(row.original.permissionIds?.length || 0) > 0" class="text-xs text-muted">{{ row.original.permissionIds.length }} perm</span>
       </template>
 
       <template #userCount-cell="{ row }">
@@ -292,7 +291,7 @@ function someSelectedInResource(ids: string[], resource: string) {
       </template>
 
       <template #actions-cell="{ row }">
-        <div v-if="!row.original.isSystem" class="flex gap-1">
+        <div class="flex gap-1">
           <UTooltip text="Edit role">
             <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" square @click="openEdit(row.original)" />
           </UTooltip>
@@ -475,7 +474,7 @@ function someSelectedInResource(ids: string[], resource: string) {
       </div>
 
       <p class="text-xs text-muted mt-3">
-        This will also remove all permission assignments for this role. System roles cannot be deleted.
+        This will also remove all permission assignments for this role.
       </p>
     </template>
     <template #footer="{ close }">

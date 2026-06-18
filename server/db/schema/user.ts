@@ -2,7 +2,7 @@ import { relations } from 'drizzle-orm'
 import { index, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
 import { passwordResetToken } from './auth'
 import { timestamps } from './columns.helpers'
-import { systemRoleEnum, userStatusEnum } from './enums'
+import { userStatusEnum } from './enums'
 import { jobRole, orgUnit } from './org'
 
 export const user = pgTable('user', {
@@ -10,7 +10,7 @@ export const user = pgTable('user', {
   name: varchar({ length: 255 }),
   payrollId: varchar({ length: 6 }).unique(),
   avatarUrl: varchar({ length: 255 }),
-  role: systemRoleEnum().notNull().default('Viewer'),
+  role: varchar({ length: 100 }).notNull().default('Viewer'),
   status: userStatusEnum().notNull().default('PENDING'),
   locationId: uuid().references(() => orgUnit.id, { onDelete: 'set null' }),
   jobRoleId: uuid().references(() => jobRole.id, { onDelete: 'set null' }),

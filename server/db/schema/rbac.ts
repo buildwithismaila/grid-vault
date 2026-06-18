@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm'
-import { boolean, index, pgTable, timestamp, unique, uuid, varchar } from 'drizzle-orm/pg-core'
+import { index, pgTable, timestamp, unique, uuid, varchar } from 'drizzle-orm/pg-core'
 import { timestamps } from './columns.helpers'
 import { user } from './user'
 
@@ -16,7 +16,6 @@ export const role = pgTable('role', {
   id: uuid().defaultRandom().primaryKey(),
   name: varchar({ length: 100 }).notNull().unique(),
   description: varchar({ length: 255 }),
-  isSystem: boolean('is_system').notNull().default(false),
   ...timestamps,
 })
 

@@ -1,6 +1,5 @@
 import { eq, inArray } from 'drizzle-orm'
 import { ACTIONS, RESOURCES } from '~~/shared/utils/permissions'
-import { SYSTEM_ROLES } from '~~/shared/utils/roles'
 import { permission, role, rolePermission } from '../../db/schema/rbac'
 
 export async function seedRbac() {
@@ -54,18 +53,120 @@ async function seedPermissions(db: ReturnType<typeof useDb>) {
   }
 }
 
+const seedRoleDefs: Record<string, string[]> = {
+  'Admin': [
+    'user:create',
+    'user:read',
+    'user:update',
+    'user:delete',
+    'org_unit:create',
+    'org_unit:read',
+    'org_unit:update',
+    'org_unit:delete',
+    'job_role:create',
+    'job_role:read',
+    'job_role:update',
+    'job_role:delete',
+    'inventory:create',
+    'inventory:read',
+    'inventory:update',
+    'inventory:delete',
+    'asset:create',
+    'asset:read',
+    'asset:update',
+    'asset:delete',
+    'report:create',
+    'report:read',
+    'report:update',
+    'report:delete',
+  ],
+  'HQ Asset Manager': [
+    'user:read',
+    'org_unit:read',
+    'job_role:read',
+    'inventory:create',
+    'inventory:read',
+    'inventory:update',
+    'asset:create',
+    'asset:read',
+    'asset:update',
+    'asset:delete',
+    'report:read',
+  ],
+  'Regional Technical Manager': [
+    'user:read',
+    'org_unit:read',
+    'job_role:read',
+    'inventory:read',
+    'asset:read',
+    'report:read',
+  ],
+  'Technical Manager': [
+    'user:read',
+    'org_unit:read',
+    'job_role:read',
+    'inventory:read',
+    'inventory:update',
+    'asset:read',
+    'asset:update',
+    'report:read',
+  ],
+  'Service Centre Technician': [
+    'user:read',
+    'org_unit:read',
+    'job_role:read',
+    'inventory:read',
+    'inventory:update',
+    'asset:read',
+    'asset:update',
+  ],
+  'Finance Officer': [
+    'user:read',
+    'org_unit:read',
+    'job_role:read',
+    'inventory:read',
+    'asset:read',
+    'report:create',
+    'report:read',
+    'report:update',
+  ],
+  'Stores Officer': [
+    'user:read',
+    'org_unit:read',
+    'inventory:create',
+    'inventory:read',
+    'inventory:update',
+    'inventory:delete',
+    'asset:read',
+    'report:read',
+  ],
+  'Auditor': [
+    'user:read',
+    'org_unit:read',
+    'job_role:read',
+    'inventory:read',
+    'asset:read',
+    'report:read',
+  ],
+  'Viewer': [
+    'user:read',
+    'org_unit:read',
+    'job_role:read',
+    'report:read',
+  ],
+}
+
 async function seedRoles(db: ReturnType<typeof useDb>) {
-  for (const [roleName] of Object.entries(SYSTEM_ROLES)) {
+  for (const roleName of Object.keys(seedRoleDefs)) {
     await db.insert(role).values({
       name: roleName,
-      description: `System ${roleName} role`,
-      isSystem: true,
+      description: `${roleName} role`,
     }).onConflictDoNothing({ target: role.name })
   }
 }
 
 async function seedRolePermissions(db: ReturnType<typeof useDb>) {
-  for (const [roleName, permNames] of Object.entries(SYSTEM_ROLES)) {
+  for (const [roleName, permNames] of Object.entries(seedRoleDefs)) {
     const [roleRow] = await db.select().from(role).where(eq(role.name, roleName)).limit(1)
     if (!roleRow)
       continue

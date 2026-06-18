@@ -89,6 +89,6 @@ export default defineEventHandler(async (event) => {
 
   return rows.map(u => ({
     ...u,
-    customRoles: userRolesMap[u.id] || [],
+    customRoles: (userRolesMap[u.id] || []).filter(name => name !== u.role),
   }))
 })

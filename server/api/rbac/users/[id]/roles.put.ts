@@ -1,6 +1,7 @@
 import { eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 import { role, userRole } from '#server/db/schema/rbac'
+import { user } from '#server/db/schema/user'
 import { validateBody } from '#server/utils/validate'
 
 const setUserRolesSchema = z.object({
@@ -31,6 +32,26 @@ export default defineEventHandler(async (event) => {
     await db.insert(userRole).values(
       body.roleIds.map(roleId => ({ userId: id, roleId })),
     )
+  }
+
+  // Sync user.role if the primary role was removed or no longer matches
+  const [currentUser] = await db.select({ role: user.role }).from(user).where(eq(user.id, id)).limit(1)
+  if (currentUser && body.roleIds.length > 0) {
+    const newRoles = await db
+      .select({ name: role.name })
+      .from(role)
+      .where(inArray(role.id, body.roleIds))
+
+    const newRoleNames = newRoles.map(r => r.name)
+    if (!newRoleNames.includes(currentUser.role)) {
+      const [firstRole] = newRoles
+      if (firstRole) {
+        await db.update(user).set({ role: firstRole.name }).where(eq(user.id, id))
+      }
+    }
+  }
+  else if (currentUser && body.roleIds.length === 0 && currentUser.role !== 'Superadmin') {
+    await db.update(user).set({ role: 'Viewer' }).where(eq(user.id, id))
   }
 
   return { success: true }

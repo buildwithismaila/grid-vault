@@ -57,7 +57,6 @@ export interface RoleRow {
   id: string
   name: string
   description: string | null
-  isSystem: boolean
   permissionIds: string[]
   userCount: number
 }

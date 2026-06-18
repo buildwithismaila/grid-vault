@@ -9,8 +9,10 @@ const { can } = useAuthorization()
 const { onError, toast } = useToastError()
 const table = useTemplateRef('table')
 
-const roleOptions = ['Admin', 'HQ Asset Manager', 'Regional Technical Manager', 'Technical Manager', 'Service Centre Technician', 'Finance Officer', 'Stores Officer', 'Auditor', 'Viewer']
 const editStatusOptions = ['ACTIVE', 'INACTIVE', 'PENDING'].map(v => ({ value: v, label: formatEnum(v) }))
+
+const { data: allRoles } = useLazyFetch('/api/rbac/roles', { server: false })
+const roleOptions = computed(() => ((allRoles.value ?? []) as RoleRow[]).map(r => r.name))
 
 const search = ref('')
 const statusFilter = ref('all')
@@ -335,7 +337,7 @@ function getActionItems(user: UserRow) {
   }
   const items: DropdownMenuItem[][] = [
     [{ label: 'Edit user', icon: 'i-lucide-pencil', onSelect: () => openEdit(user) }],
-    [{ label: 'Assign roles', icon: 'i-lucide-user-round-cog', onSelect: () => openRoleAssignment(user) }],
+    [{ label: 'Manage roles', icon: 'i-lucide-user-round-cog', onSelect: () => openRoleAssignment(user) }],
     [{ label: 'Disable user', icon: 'i-lucide-pause', color: 'warning' as const, onSelect: () => toggleStatus(user) }],
     [{ label: 'Reset password', icon: 'i-lucide-key-round', onSelect: () => resetPassword(user) }],
   ]
@@ -651,14 +653,14 @@ function getActionItems(user: UserRow) {
     </template>
   </UModal>
 
-  <UModal v-model:open="rolesOpen" :title="`Assign custom roles — ${selectedUser?.name || selectedUser?.email || ''}`" description="Select custom roles for this user">
+  <UModal v-model:open="rolesOpen" :title="`Manage roles — ${selectedUser?.name || selectedUser?.email || ''}`" description="Select all roles this user should have">
     <template #body>
       <div v-if="rolesLoading" class="flex items-center justify-center gap-2 py-8">
         <UIcon name="i-lucide-loader" class="size-4 animate-spin" />
         <span class="text-sm text-muted">Loading roles...</span>
       </div>
       <div v-else-if="!roles?.length" class="py-8 text-center text-sm text-muted">
-        No custom roles defined yet. Create roles in the Roles page first.
+        No roles defined yet. Contact an administrator.
       </div>
       <div v-else class="space-y-3">
         <div v-for="r in (roles as RoleRow[])" :key="r.id" class="flex items-center gap-3">

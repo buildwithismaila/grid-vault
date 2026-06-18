@@ -18,12 +18,7 @@ const loading = computed(() => permsStatus.value === 'pending' || permsStatus.va
 
 const seeding = ref(false)
 const refreshing = ref(false)
-const hideSystem = ref(false)
-
-const visibleRoles = computed(() => {
-  const allRoles = (roles.value ?? []) as RoleRow[]
-  return hideSystem.value ? allRoles.filter(r => !r.isSystem) : allRoles
-})
+const visibleRoles = computed(() => (roles.value ?? []) as RoleRow[])
 
 const dirtyRolesSet = reactive(new Set<string>())
 
@@ -170,7 +165,7 @@ const sectionMeta: Record<string, { label: string, icon: string, resources: read
           Permission Matrix
         </h2>
         <p class="text-sm text-muted mt-1">
-          Toggle permissions on or off for each custom role. System roles are read-only.
+          Toggle permissions on or off for each role.
           Changes are saved in batch — click "Save changes" when done.
         </p>
       </div>
@@ -192,23 +187,17 @@ const sectionMeta: Record<string, { label: string, icon: string, resources: read
         <UIcon name="i-lucide-eye-off" class="size-10 text-muted" />
         <div class="text-center">
           <p class="text-sm font-medium">
-            No custom roles to display
+            No roles to display
           </p>
           <p class="text-xs text-muted mt-1">
-            All roles are system roles. Toggle "Show system roles" above to see them, or create custom roles in the Roles page
+            Create roles in the Roles page first
           </p>
         </div>
         <UButton icon="i-lucide-plus" label="Create role" to="/admin/roles" />
       </div>
 
       <div v-else>
-        <div class="flex items-center justify-between px-4 py-3 border-b border-accented">
-          <div class="flex items-center gap-3">
-            <div class="flex items-center gap-2">
-              <USwitch v-model="hideSystem" size="sm" />
-              <span class="text-sm text-muted">Hide system roles</span>
-            </div>
-          </div>
+        <div class="flex items-center justify-end px-4 py-3 border-b border-accented">
           <UButton
             icon="i-lucide-refresh-cw"
             color="neutral"
@@ -239,10 +228,7 @@ const sectionMeta: Record<string, { label: string, icon: string, resources: read
                 >
                   <div class="flex flex-col items-center gap-0.5">
                     <span class="truncate max-w-24" :title="r.name" :class="dirtyRolesSet.has(r.id) ? 'font-bold' : ''">{{ r.name }}</span>
-                    <div class="flex items-center gap-1">
-                      <UBadge v-if="r.isSystem" label="system" color="neutral" variant="subtle" size="sm" />
-                      <div v-else-if="dirtyRolesSet.has(r.id)" class="size-1.5 rounded-full bg-warning" />
-                    </div>
+                    <div v-if="dirtyRolesSet.has(r.id)" class="size-1.5 rounded-full bg-warning" />
                   </div>
                 </th>
               </tr>
@@ -312,15 +298,8 @@ const sectionMeta: Record<string, { label: string, icon: string, resources: read
                       >
                         <div class="flex items-center justify-center min-h-[28px]">
                           <USwitch
-                            v-if="!r.isSystem"
                             :model-value="getEffectivePerms(r.id, r.permissionIds).includes(p.id)"
                             @update:model-value="(v: boolean) => togglePerm(r.id, p.id, getEffectivePerms(r.id, r.permissionIds).includes(p.id))"
-                          />
-                          <UIcon
-                            v-else
-                            :name="r.permissionIds.includes(p.id) ? 'i-lucide-check' : 'i-lucide-minus'"
-                            class="size-4"
-                            :class="r.permissionIds.includes(p.id) ? 'text-success' : 'text-muted'"
                           />
                         </div>
                       </td>
