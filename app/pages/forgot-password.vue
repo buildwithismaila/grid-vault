@@ -47,9 +47,17 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     </template>
 
     <template v-if="submitted">
-      <p class="text-sm text-muted">
-        If an account with that email exists, a password reset link has been sent.
-      </p>
+      <div class="space-y-3">
+        <p class="text-sm text-muted">
+          If an account with that email exists, a password reset link has been sent.
+        </p>
+        <div class="rounded-lg bg-warning/10 border border-warning/20 p-3 flex items-start gap-2">
+          <UIcon name="i-lucide-mail-search" class="size-4 text-warning mt-0.5 shrink-0" />
+          <p class="text-xs text-muted">
+            Don't see it? Check your spam folder. The email comes from <strong class="text-default">Grid Vault</strong>.
+          </p>
+        </div>
+      </div>
       <UButton
         label="Back to login"
         color="neutral"

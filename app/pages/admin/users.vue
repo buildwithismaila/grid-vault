@@ -241,15 +241,15 @@ async function resendInvite(user: UserRow) {
   }
 }
 
-async function copyInviteLink(user: UserRow) {
+async function generateInviteLink(user: UserRow) {
   try {
     const res = await $fetch<{ token?: string }>(`/api/admin/invites/${user.inviteId}/resend` as const, { method: 'POST' })
     if (res.token) {
       await navigator.clipboard.writeText(`${window.location.origin}/accept-invite/${res.token}`)
-      toast.add({ title: 'Invite link copied', color: 'success', icon: 'i-lucide-check-circle' })
+      toast.add({ title: 'New invite link generated and copied', color: 'success', icon: 'i-lucide-link' })
     }
     else {
-      toast.add({ title: 'Copy invite link only available in dev mode', color: 'warning', icon: 'i-lucide-alert-triangle' })
+      toast.add({ title: 'A new invitation has been sent by email', color: 'success', icon: 'i-lucide-mail' })
     }
     await refresh()
   }
@@ -321,7 +321,7 @@ function getActionItems(user: UserRow) {
   if (user.status === 'PENDING') {
     return [
       [{ label: 'Resend invitation', icon: 'i-lucide-mail', onSelect: () => resendInvite(user) }],
-      [{ label: 'Copy invite link', icon: 'i-lucide-link', onSelect: () => copyInviteLink(user) }],
+      [{ label: 'Generate invite link', icon: 'i-lucide-link', onSelect: () => generateInviteLink(user) }],
       [{ label: 'Cancel invitation', icon: 'i-lucide-x', color: 'error' as const, onSelect: () => cancelInvite(user) }],
     ] satisfies DropdownMenuItem[][]
   }

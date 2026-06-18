@@ -23,6 +23,9 @@ export default defineEventHandler(async (event) => {
 
   const { rawToken, tokenHash } = generateToken()
 
+  // Send the email first so we don't create orphaned tokens if email fails
+  await sendResetPasswordEmail(existingAuth.email, rawToken)
+
   await db.insert(passwordResetToken).values({
     userId: id,
     tokenHash,
