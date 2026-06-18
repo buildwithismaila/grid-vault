@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { RoleRow, UserRow } from '#shared/types/admin'
-import type { DropdownMenuItem, TableColumn } from '@nuxt/ui'
+import type { DropdownMenuItem, FormSubmitEvent, TableColumn } from '@nuxt/ui'
 import type { SortingState } from '@tanstack/vue-table'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import { formatEnum } from '#shared/utils'
+import * as z from 'zod'
 
 const { can } = useAuthorization()
 const { onError, toast } = useToastError()
@@ -28,21 +29,29 @@ const selectedUser = ref<UserRow | null>(null)
 const userToDelete = ref<UserRow | null>(null)
 const selectedRoleIds = ref<string[]>([])
 
-const inviteEmail = ref('')
-const inviteRole = ref('Viewer')
-const inviteName = ref('')
-const invitePayrollId = ref('')
-const inviteLocationId = ref('')
-const inviteJobRoleId = ref('')
+const inviteSchema = z.object({
+  email: z.string().email('Invalid email').toLowerCase().trim(),
+  role: z.string().min(1, 'Role is required'),
+  name: z.string().max(255).trim().optional(),
+  payrollId: z.string().max(6).trim().optional(),
+  locationId: z.string().optional(),
+  jobRoleId: z.string().optional(),
+})
+type InviteSchema = z.output<typeof inviteSchema>
+const inviteState = reactive<Partial<InviteSchema>>({ email: '', role: 'Viewer' })
 const inviting = ref(false)
 
-const editName = ref('')
-const editPayrollId = ref('')
-const editEmail = ref('')
-const editLocationId = ref('')
-const editJobRoleId = ref('')
-const editRole = ref('')
-const editStatus = ref('')
+const editSchema = z.object({
+  name: z.string().max(255).trim().optional(),
+  payrollId: z.string().max(6).trim().optional(),
+  email: z.string().email('Invalid email').toLowerCase().trim().optional(),
+  locationId: z.string().nullable().optional(),
+  jobRoleId: z.string().nullable().optional(),
+  role: z.string().min(1, 'Role is required'),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'PENDING']),
+})
+type EditSchema = z.output<typeof editSchema>
+const editState = reactive<Partial<EditSchema>>({})
 const saving = ref(false)
 const deleting = ref(false)
 
@@ -103,28 +112,28 @@ const columns: TableColumn<UserRow>[] = [
   { id: 'actions' },
 ]
 
-async function sendInvite() {
+async function sendInvite(event: FormSubmitEvent<InviteSchema>) {
   inviting.value = true
   try {
     await $fetch('/api/auth/invite', {
       method: 'POST',
       body: {
-        email: inviteEmail.value,
-        role: inviteRole.value,
-        name: inviteName.value || undefined,
-        payrollId: invitePayrollId.value || undefined,
-        locationId: inviteLocationId.value || undefined,
-        jobRoleId: inviteJobRoleId.value || undefined,
+        email: event.data.email,
+        role: event.data.role,
+        name: event.data.name || undefined,
+        payrollId: event.data.payrollId || undefined,
+        locationId: event.data.locationId || undefined,
+        jobRoleId: event.data.jobRoleId || undefined,
       },
     })
     toast.add({ title: 'Invitation sent', color: 'success', icon: 'i-lucide-check-circle' })
     inviteOpen.value = false
-    inviteEmail.value = ''
-    inviteRole.value = 'Viewer'
-    inviteName.value = ''
-    invitePayrollId.value = ''
-    inviteLocationId.value = ''
-    inviteJobRoleId.value = ''
+    inviteState.email = ''
+    inviteState.role = 'Viewer'
+    inviteState.name = ''
+    inviteState.payrollId = ''
+    inviteState.locationId = ''
+    inviteState.jobRoleId = ''
     await refresh()
   }
   catch (err) {
@@ -137,31 +146,31 @@ async function sendInvite() {
 
 function openEdit(user: UserRow) {
   selectedUser.value = user
-  editName.value = user.name ?? ''
-  editPayrollId.value = user.payrollId ?? ''
-  editEmail.value = user.email
-  editLocationId.value = user.locationId ?? ''
-  editJobRoleId.value = user.jobRoleId ?? ''
-  editRole.value = user.role
-  editStatus.value = user.status
+  editState.name = user.name ?? ''
+  editState.payrollId = user.payrollId ?? ''
+  editState.email = user.email
+  editState.locationId = user.locationId ?? ''
+  editState.jobRoleId = user.jobRoleId ?? ''
+  editState.role = user.role
+  editState.status = user.status as 'ACTIVE' | 'INACTIVE' | 'PENDING'
   editOpen.value = true
 }
 
-async function saveUser() {
+async function saveUser(event: FormSubmitEvent<EditSchema>) {
   if (!selectedUser.value)
     return
   saving.value = true
   try {
     const body: Record<string, unknown> = {
-      name: editName.value || undefined,
-      payrollId: editPayrollId.value || undefined,
-      locationId: editLocationId.value || null,
-      jobRoleId: editJobRoleId.value || null,
-      role: editRole.value,
-      status: editStatus.value,
+      name: event.data.name || undefined,
+      payrollId: event.data.payrollId || undefined,
+      locationId: event.data.locationId || null,
+      jobRoleId: event.data.jobRoleId || null,
+      role: event.data.role,
+      status: event.data.status,
     }
-    if (editEmail.value !== selectedUser.value.email)
-      body.email = editEmail.value
+    if (event.data.email !== selectedUser.value.email)
+      body.email = event.data.email
 
     await $fetch(`/api/admin/users/${selectedUser.value.id}` as const, {
       method: 'PUT',
@@ -272,7 +281,7 @@ async function cancelInvite(user: UserRow) {
 async function resetPassword(user: UserRow) {
   try {
     const res = await $fetch<{ token?: string }>(`/api/admin/users/${user.id}/reset-password` as const, { method: 'POST' })
-    toast.add({ title: 'Password reset link generated', color: 'success', icon: 'i-lucide-check-circle' })
+    toast.add({ title: 'Password reset email sent', color: 'success', icon: 'i-lucide-mail' })
     if (res.token && import.meta.dev) {
       await navigator.clipboard.writeText(`${window.location.origin}/reset-password/${res.token}`)
       toast.add({ title: 'Dev: reset link copied to clipboard', color: 'info', icon: 'i-lucide-link' })
@@ -553,104 +562,120 @@ function getActionItems(user: UserRow) {
   </div>
 
   <UModal v-model:open="inviteOpen" title="Invite user" description="Set up a new user and send an invitation email">
-    <template #body>
-      <div class="max-w-sm mx-auto space-y-5 py-1">
-        <UFormField name="email" label="Email" required hint="Required">
-          <UInput v-model="inviteEmail" type="email" placeholder="user@example.com" class="w-full" />
-        </UFormField>
-        <UFormField name="invite-name" label="Name">
-          <UInput v-model="inviteName" placeholder="Full name" class="w-full" />
-        </UFormField>
-        <UFormField name="payroll-id" label="Payroll ID" hint="Max 6 characters">
-          <UInput v-model="invitePayrollId" placeholder="e.g. 000001" maxlength="6" class="w-full" />
-        </UFormField>
-        <div class="grid grid-cols-2 gap-4">
-          <UFormField name="location" label="Location">
-            <USelect
-              v-model="inviteLocationId"
-              :items="orgUnits ?? []"
-              value-key="id"
-              label-key="name"
-              :loading="!orgUnits"
-              placeholder="Select location"
-              class="w-full"
-            />
+    <UForm
+      :key="inviteOpen ? 'invite-open' : 'invite-closed'"
+      :schema="inviteSchema"
+      :state="inviteState"
+      class="space-y-0"
+      @submit="sendInvite"
+    >
+      <template #body>
+        <div class="max-w-sm mx-auto space-y-5 py-1">
+          <UFormField name="email" label="Email" required hint="Required">
+            <UInput v-model="inviteState.email" type="email" placeholder="user@example.com" class="w-full" />
           </UFormField>
-          <UFormField name="job-role" label="Job Role">
-            <USelect
-              v-model="inviteJobRoleId"
-              :items="jobRoles ?? []"
-              value-key="id"
-              label-key="name"
-              :loading="!jobRoles"
-              placeholder="Select job role"
-              class="w-full"
-            />
+          <UFormField name="name" label="Name">
+            <UInput v-model="inviteState.name" placeholder="Full name" class="w-full" />
+          </UFormField>
+          <UFormField name="payrollId" label="Payroll ID" hint="Max 6 characters">
+            <UInput v-model="inviteState.payrollId" placeholder="e.g. 000001" maxlength="6" class="w-full" />
+          </UFormField>
+          <div class="grid grid-cols-2 gap-4">
+            <UFormField name="locationId" label="Location">
+              <USelect
+                v-model="inviteState.locationId"
+                :items="orgUnits ?? []"
+                value-key="id"
+                label-key="name"
+                :loading="!orgUnits"
+                placeholder="Select location"
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField name="jobRoleId" label="Job Role">
+              <USelect
+                v-model="inviteState.jobRoleId"
+                :items="jobRoles ?? []"
+                value-key="id"
+                label-key="name"
+                :loading="!jobRoles"
+                placeholder="Select job role"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
+          <UFormField name="role" label="Initial role" required hint="Required">
+            <USelect v-model="inviteState.role" :items="roleOptions" class="w-full" />
           </UFormField>
         </div>
-        <UFormField name="role" label="Initial role" required hint="Required">
-          <USelect v-model="inviteRole" :items="roleOptions" class="w-full" />
-        </UFormField>
-      </div>
-    </template>
-    <template #footer>
-      <div class="flex justify-end gap-3">
-        <UButton label="Cancel" color="neutral" variant="outline" @click="inviteOpen = false" />
-        <UButton label="Send invite" :loading="inviting" :disabled="!inviteEmail" @click="sendInvite" />
-      </div>
-    </template>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <UButton label="Cancel" color="neutral" variant="outline" @click="inviteOpen = false" />
+          <UButton type="submit" :loading="inviting" label="Send invite" />
+        </div>
+      </template>
+    </UForm>
   </UModal>
 
   <UModal v-model:open="editOpen" :title="`Edit user — ${selectedUser?.name || selectedUser?.email || ''}`" description="Update user details">
-    <template #body>
-      <div class="max-w-sm mx-auto space-y-5 py-1">
-        <UFormField name="edit-name" label="Name">
-          <UInput v-model="editName" class="w-full" />
-        </UFormField>
-        <UFormField name="edit-payroll-id" label="Payroll ID">
-          <UInput v-model="editPayrollId" maxlength="6" class="w-full" />
-        </UFormField>
-        <UFormField name="edit-email" label="Email">
-          <UInput v-model="editEmail" type="email" class="w-full" />
-        </UFormField>
-        <div class="grid grid-cols-2 gap-4">
-          <UFormField name="edit-location" label="Location">
-            <USelect
-              v-model="editLocationId"
-              :items="orgUnits ?? []"
-              value-key="id"
-              label-key="name"
-              :loading="!orgUnits"
-              placeholder="Select location"
-              class="w-full"
-            />
+    <UForm
+      :key="editOpen ? 'edit-open' : 'edit-closed'"
+      :schema="editSchema"
+      :state="editState"
+      class="space-y-0"
+      @submit="saveUser"
+    >
+      <template #body>
+        <div class="max-w-sm mx-auto space-y-5 py-1">
+          <UFormField name="name" label="Name">
+            <UInput v-model="editState.name" class="w-full" />
           </UFormField>
-          <UFormField name="edit-job-role" label="Job Role">
-            <USelect
-              v-model="editJobRoleId"
-              :items="jobRoles ?? []"
-              value-key="id"
-              label-key="name"
-              :loading="!jobRoles"
-              placeholder="Select job role"
-              class="w-full"
-            />
+          <UFormField name="payrollId" label="Payroll ID">
+            <UInput v-model="editState.payrollId" maxlength="6" class="w-full" />
+          </UFormField>
+          <UFormField name="email" label="Email">
+            <UInput v-model="editState.email" type="email" class="w-full" />
+          </UFormField>
+          <div class="grid grid-cols-2 gap-4">
+            <UFormField name="locationId" label="Location">
+              <USelect
+                v-model="editState.locationId"
+                :items="orgUnits ?? []"
+                value-key="id"
+                label-key="name"
+                :loading="!orgUnits"
+                placeholder="Select location"
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField name="jobRoleId" label="Job Role">
+              <USelect
+                v-model="editState.jobRoleId"
+                :items="jobRoles ?? []"
+                value-key="id"
+                label-key="name"
+                :loading="!jobRoles"
+                placeholder="Select job role"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
+          <UFormField name="role" label="Role" required>
+            <USelect v-model="editState.role" :items="roleOptions" class="w-full" />
+          </UFormField>
+          <UFormField name="status" label="Status" required>
+            <USelect v-model="editState.status" :items="editStatusOptions" class="w-full" />
           </UFormField>
         </div>
-        <UFormField name="edit-role" label="Role">
-          <USelect v-model="editRole" :items="roleOptions" class="w-full" />
-        </UFormField>
-        <UFormField name="edit-status" label="Status">
-          <USelect v-model="editStatus" :items="editStatusOptions" class="w-full" />
-        </UFormField>
-      </div>
-    </template>
-    <template #footer="{ close }">
-      <div class="flex justify-end gap-3">
-        <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
-        <UButton label="Save" :loading="saving" @click="saveUser" />
-      </div>
-    </template>
+      </template>
+      <template #footer="{ close }">
+        <div class="flex justify-end gap-3">
+          <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
+          <UButton type="submit" :loading="saving" label="Save" />
+        </div>
+      </template>
+    </UForm>
   </UModal>
 
   <UModal v-model:open="rolesOpen" :title="`Manage roles — ${selectedUser?.name || selectedUser?.email || ''}`" description="Select all roles this user should have">
