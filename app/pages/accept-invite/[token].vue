@@ -7,8 +7,8 @@ definePageMeta({ layout: 'auth' })
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+const { globalError, handleApiError, resetErrors } = useFormError()
 const loading = ref(false)
-const error = ref('')
 
 const schema = z.object({
   password: z.string('Password is required').min(8, 'Min 8 characters').max(72),
@@ -23,7 +23,7 @@ const state = reactive<Partial<Schema>>({ password: '', confirmPassword: '' })
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   loading.value = true
-  error.value = ''
+  resetErrors()
 
   try {
     await $fetch('/api/auth/accept-invite', {
@@ -41,8 +41,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     })
     await router.push('/login')
   }
-  catch (err: any) {
-    error.value = err.data?.statusMessage || 'Failed to accept invitation'
+  catch (err) {
+    handleApiError(err, 'Failed to accept invitation')
   }
   finally {
     loading.value = false
@@ -70,8 +70,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       @submit="onSubmit"
     >
       <UAlert
-        v-if="error"
-        :title="error"
+        v-if="globalError"
+        :title="globalError"
         color="error"
         variant="soft"
         icon="i-lucide-alert-circle"
@@ -79,14 +79,14 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         :close-button="{
           'icon': 'i-lucide-x',
           'aria-label': 'Dismiss',
-          'onClick': () => { error = '' },
+          'onClick': resetErrors,
         }"
       />
 
       <UFormField name="password" label="Password" required>
         <template #default>
           <UInput v-model="state.password" type="password" placeholder="Min 8 characters" class="w-full" />
-          <PasswordStrength :password="state.password" />
+          <PasswordStrength :password="state.password!" />
         </template>
       </UFormField>
 

@@ -34,6 +34,15 @@ export default defineNuxtConfig({
       baseName: 'migrations',
       dir: 'server/db/migrations',
     }],
+    storage: {
+      shield: process.env.NUXT_UPSTASH_KV_REST_API_URL
+        ? {
+            driver: 'upstash',
+            url: process.env.NUXT_UPSTASH_KV_REST_API_URL,
+            token: process.env.NUXT_UPSTASH_KV_REST_API_TOKEN,
+          }
+        : { driver: 'memory' },
+    },
   },
   vite: {
     optimizeDeps: {

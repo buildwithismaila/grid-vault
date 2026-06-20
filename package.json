@@ -21,6 +21,7 @@
     "@nuxt/eslint": "1.15.2",
     "@nuxt/ui": "^4.8.1",
     "@tanstack/vue-table": "^8.21.3",
+    "@upstash/redis": "^1.38.0",
     "drizzle-orm": "^0.45.2",
     "nuxt": "^4.4.6",
     "nuxt-auth-utils": "0.5.29",

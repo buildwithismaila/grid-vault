@@ -4,6 +4,8 @@ import { changePasswordSchema } from '#shared/schemas/user'
 
 const toast = useToast()
 const { fieldErrors, globalError, handleApiError, resetErrors } = useFormError()
+const mfaSetupForm = useFormError()
+const mfaDisableForm = useFormError()
 
 const currentPassword = ref('')
 const newPassword = ref('')
@@ -73,16 +75,14 @@ const mfaSetupOtpauth = ref('')
 const mfaSetupQrDataUrl = ref('')
 const mfaVerifyCode = ref('')
 const mfaVerifyLoading = ref(false)
-const mfaSetupError = ref('')
 const mfaDisablePassword = ref('')
 const mfaDisableCode = ref('')
 const mfaDisableLoading = ref(false)
-const mfaDisableError = ref('')
 
 async function startMfaSetup() {
-  mfaSetupError.value = ''
+  mfaSetupForm.resetErrors()
   if (!mfaSetupPassword.value) {
-    mfaSetupError.value = 'Password is required'
+    mfaSetupForm.globalError.value = 'Password is required'
     return
   }
   try {
@@ -95,16 +95,16 @@ async function startMfaSetup() {
     mfaSetupQrDataUrl.value = await QRCode.toDataURL(res.otpauth, { width: 256 })
     mfaSetupOpen.value = true
   }
-  catch (err: any) {
-    mfaSetupError.value = err?.data?.statusMessage || 'Failed to setup MFA'
+  catch (err) {
+    mfaSetupForm.handleApiError(err, 'Failed to setup MFA')
   }
 }
 
 async function verifyMfa() {
-  mfaSetupError.value = ''
+  mfaSetupForm.resetErrors()
   const code = mfaVerifyCode.value.trim()
   if (code.length !== 6 || !/^\d{6}$/.test(code)) {
-    mfaSetupError.value = 'Enter a valid 6-digit code'
+    mfaSetupForm.globalError.value = 'Enter a valid 6-digit code'
     return
   }
   mfaVerifyLoading.value = true
@@ -122,8 +122,8 @@ async function verifyMfa() {
     toast.add({ title: 'MFA enabled', color: 'success' })
     refreshMfa()
   }
-  catch (err: any) {
-    mfaSetupError.value = err?.data?.data?.token?.[0] || err?.data?.statusMessage || 'Invalid verification code'
+  catch (err) {
+    mfaSetupForm.handleApiError(err, 'Invalid verification code')
   }
   finally {
     mfaVerifyLoading.value = false
@@ -137,11 +137,11 @@ function cancelMfaSetup() {
   mfaSetupOtpauth.value = ''
   mfaSetupQrDataUrl.value = ''
   mfaVerifyCode.value = ''
-  mfaSetupError.value = ''
+  mfaSetupForm.resetErrors()
 }
 
 async function disableMfa() {
-  mfaDisableError.value = ''
+  mfaDisableForm.resetErrors()
   mfaDisableLoading.value = true
   try {
     await $fetch('/api/auth/mfa/disable', {
@@ -154,8 +154,8 @@ async function disableMfa() {
     mfaDisableCode.value = ''
     await refreshMfa()
   }
-  catch (err: any) {
-    mfaDisableError.value = err?.data?.statusMessage || 'Failed to disable MFA'
+  catch (err) {
+    mfaDisableForm.handleApiError(err, 'Failed to disable MFA')
   }
   finally {
     mfaDisableLoading.value = false
@@ -285,7 +285,7 @@ async function disableMfa() {
           <p class="text-sm text-muted text-center">
             Enter your password to generate a security key
           </p>
-          <UAlert v-if="mfaSetupError" color="error" variant="soft" :title="mfaSetupError" icon="i-lucide-alert-circle" />
+          <UAlert v-if="mfaSetupForm.globalError.value" color="error" variant="soft" :title="mfaSetupForm.globalError.value" icon="i-lucide-alert-circle" />
           <UFormField name="password" label="Password" required>
             <UInput v-model="mfaSetupPassword" type="password" placeholder="Enter your password" class="w-full" />
           </UFormField>
@@ -310,7 +310,7 @@ async function disableMfa() {
             <code class="text-xs bg-elevated px-2 py-1 rounded select-all font-mono">{{ mfaSetupSecret }}</code>
           </div>
 
-          <UAlert v-if="mfaSetupError" color="error" variant="soft" :title="mfaSetupError" icon="i-lucide-alert-circle" />
+          <UAlert v-if="mfaSetupForm.globalError.value" color="error" variant="soft" :title="mfaSetupForm.globalError.value" icon="i-lucide-alert-circle" />
 
           <UFormField name="code" label="Verification code" required>
             <UInput
@@ -343,7 +343,7 @@ async function disableMfa() {
           <p class="text-sm text-muted text-center">
             Enter your password and an authentication code to confirm
           </p>
-          <UAlert v-if="mfaDisableError" color="error" variant="soft" :title="mfaDisableError" icon="i-lucide-alert-circle" />
+          <UAlert v-if="mfaDisableForm.globalError.value" color="error" variant="soft" :title="mfaDisableForm.globalError.value" icon="i-lucide-alert-circle" />
           <UFormField name="password" label="Password" required>
             <UInput v-model="mfaDisablePassword" type="password" placeholder="Enter your password" class="w-full" />
           </UFormField>
@@ -360,7 +360,7 @@ async function disableMfa() {
 
       <template #footer>
         <div class="flex justify-end gap-2">
-          <UButton color="neutral" variant="soft" label="Cancel" @click="mfaDisableOpen = false; mfaDisablePassword = ''; mfaDisableCode = ''; mfaDisableError = ''" />
+          <UButton color="neutral" variant="soft" label="Cancel" @click="mfaDisableOpen = false; mfaDisablePassword = ''; mfaDisableCode = ''; mfaDisableForm.resetErrors()" />
           <UButton color="error" label="Disable MFA" :loading="mfaDisableLoading" @click="disableMfa" />
         </div>
       </template>

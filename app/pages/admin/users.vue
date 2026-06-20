@@ -1,24 +1,13 @@
 <script setup lang="ts">
-import type { RoleRow, UserRow } from '#shared/types/admin'
-import type { DropdownMenuItem, FormSubmitEvent, TableColumn } from '@nuxt/ui'
+import type { UserRow } from '#shared/types/admin'
+import type { DropdownMenuItem, TableColumn } from '@nuxt/ui'
 import type { SortingState } from '@tanstack/vue-table'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import { formatEnum } from '#shared/utils'
-import * as z from 'zod'
 
 const { can } = useAuthorization()
 const { onError, toast } = useToastError()
 const table = useTemplateRef('table')
-
-const editStatusOptions = ['ACTIVE', 'INACTIVE', 'PENDING'].map(v => ({ value: v, label: formatEnum(v) }))
-
-const { data: allRoles } = useLazyFetch('/api/rbac/roles', { server: false })
-const roleOptions = computed(() => ((allRoles.value ?? []) as RoleRow[]).map(r => r.name))
-
-const search = ref('')
-const statusFilter = ref('all')
-const pagination = ref({ pageIndex: 0, pageSize: 15 })
-const sorting = ref<SortingState>([])
 
 const inviteOpen = ref(false)
 const editOpen = ref(false)
@@ -27,41 +16,21 @@ const deleteOpen = ref(false)
 
 const selectedUser = ref<UserRow | null>(null)
 const userToDelete = ref<UserRow | null>(null)
-const selectedRoleIds = ref<string[]>([])
 
-const inviteSchema = z.object({
-  email: z.string().email('Invalid email').toLowerCase().trim(),
-  role: z.string().min(1, 'Role is required'),
-  name: z.string().max(255).trim().optional(),
-  payrollId: z.string().max(6).trim().optional(),
-  locationId: z.string().optional(),
-  jobRoleId: z.string().optional(),
-})
-type InviteSchema = z.output<typeof inviteSchema>
-const inviteState = reactive<Partial<InviteSchema>>({ email: '', role: 'Viewer' })
-const inviting = ref(false)
+const { data: allRoles } = useLazyFetch('/api/rbac/roles', { server: false })
+const roleOptions = computed(() => ((allRoles.value ?? []) as any[]).map((r: any) => r.name))
 
-const editSchema = z.object({
-  name: z.string().max(255).trim().optional(),
-  payrollId: z.string().max(6).trim().optional(),
-  email: z.string().email('Invalid email').toLowerCase().trim().optional(),
-  locationId: z.string().nullable().optional(),
-  jobRoleId: z.string().nullable().optional(),
-  role: z.string().min(1, 'Role is required'),
-  status: z.enum(['ACTIVE', 'INACTIVE', 'PENDING']),
-})
-type EditSchema = z.output<typeof editSchema>
-const editState = reactive<Partial<EditSchema>>({})
-const saving = ref(false)
-const deleting = ref(false)
+const search = ref('')
+const statusFilter = ref('all')
+const pagination = ref({ pageIndex: 0, pageSize: 15 })
+const sorting = ref<SortingState>([])
 
 const { data: users, status: fetchStatus, refresh } = useLazyFetch('/api/admin/users', { server: false })
-const { data: roles, status: rolesStatus } = useLazyFetch('/api/rbac/roles', { server: false })
+const { data: roles } = useLazyFetch('/api/rbac/roles', { server: false })
 const { data: orgUnits } = useLazyFetch('/api/org-units', { server: false })
 const { data: jobRoles } = useLazyFetch('/api/job-roles', { server: false })
 
 const loading = computed(() => fetchStatus.value === 'pending' || fetchStatus.value === 'idle')
-const rolesLoading = computed(() => rolesStatus.value === 'pending' || rolesStatus.value === 'idle')
 
 const filteredUsers = computed(() => {
   let data = (users.value ?? []) as UserRow[]
@@ -112,82 +81,6 @@ const columns: TableColumn<UserRow>[] = [
   { id: 'actions' },
 ]
 
-async function sendInvite(event: FormSubmitEvent<InviteSchema>) {
-  inviting.value = true
-  try {
-    await $fetch('/api/auth/invite', {
-      method: 'POST',
-      body: {
-        email: event.data.email,
-        role: event.data.role,
-        name: event.data.name || undefined,
-        payrollId: event.data.payrollId || undefined,
-        locationId: event.data.locationId || undefined,
-        jobRoleId: event.data.jobRoleId || undefined,
-      },
-    })
-    toast.add({ title: 'Invitation sent', color: 'success', icon: 'i-lucide-check-circle' })
-    inviteOpen.value = false
-    inviteState.email = ''
-    inviteState.role = 'Viewer'
-    inviteState.name = ''
-    inviteState.payrollId = ''
-    inviteState.locationId = ''
-    inviteState.jobRoleId = ''
-    await refresh()
-  }
-  catch (err) {
-    onError(err, 'Failed to send invite')
-  }
-  finally {
-    inviting.value = false
-  }
-}
-
-function openEdit(user: UserRow) {
-  selectedUser.value = user
-  editState.name = user.name ?? ''
-  editState.payrollId = user.payrollId ?? ''
-  editState.email = user.email
-  editState.locationId = user.locationId ?? ''
-  editState.jobRoleId = user.jobRoleId ?? ''
-  editState.role = user.role
-  editState.status = user.status as 'ACTIVE' | 'INACTIVE' | 'PENDING'
-  editOpen.value = true
-}
-
-async function saveUser(event: FormSubmitEvent<EditSchema>) {
-  if (!selectedUser.value)
-    return
-  saving.value = true
-  try {
-    const body: Record<string, unknown> = {
-      name: event.data.name || undefined,
-      payrollId: event.data.payrollId || undefined,
-      locationId: event.data.locationId || null,
-      jobRoleId: event.data.jobRoleId || null,
-      role: event.data.role,
-      status: event.data.status,
-    }
-    if (event.data.email !== selectedUser.value.email)
-      body.email = event.data.email
-
-    await $fetch(`/api/admin/users/${selectedUser.value.id}` as const, {
-      method: 'PUT',
-      body,
-    })
-    toast.add({ title: 'User updated', color: 'success', icon: 'i-lucide-check-circle' })
-    editOpen.value = false
-    await refresh()
-  }
-  catch (err) {
-    onError(err, 'Failed to update user')
-  }
-  finally {
-    saving.value = false
-  }
-}
-
 async function toggleStatus(user: UserRow) {
   const newStatus: UserRow['status'] = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
   try {
@@ -200,38 +93,6 @@ async function toggleStatus(user: UserRow) {
   }
   catch (err) {
     onError(err, 'Failed to update status')
-  }
-}
-
-async function openRoleAssignment(user: UserRow) {
-  selectedUser.value = user
-  selectedRoleIds.value = []
-  try {
-    const userRoles = await $fetch<{ roleId: string }[]>(`/api/rbac/users/${user.id}/roles`)
-    selectedRoleIds.value = userRoles.map(r => r.roleId)
-  }
-  catch { /* no roles yet */ }
-  rolesOpen.value = true
-}
-
-async function saveUserRoles() {
-  if (!selectedUser.value)
-    return
-  saving.value = true
-  try {
-    await $fetch(`/api/rbac/users/${selectedUser.value.id}/roles` as const, {
-      method: 'PUT',
-      body: { roleIds: selectedRoleIds.value },
-    })
-    toast.add({ title: 'Roles updated', color: 'success', icon: 'i-lucide-check-circle' })
-    rolesOpen.value = false
-    await refresh()
-  }
-  catch (err) {
-    onError(err, 'Failed to update roles')
-  }
-  finally {
-    saving.value = false
   }
 }
 
@@ -278,7 +139,7 @@ async function cancelInvite(user: UserRow) {
   }
 }
 
-async function resetPassword(user: UserRow) {
+async function resetUserPassword(user: UserRow) {
   try {
     const res = await $fetch<{ token?: string }>(`/api/admin/users/${user.id}/reset-password` as const, { method: 'POST' })
     toast.add({ title: 'Password reset email sent', color: 'success', icon: 'i-lucide-mail' })
@@ -293,37 +154,19 @@ async function resetPassword(user: UserRow) {
   }
 }
 
-function handleRoleCheckbox(roleId: string, checked: boolean | 'indeterminate') {
-  if (checked) {
-    selectedRoleIds.value = [...selectedRoleIds.value, roleId]
-  }
-  else {
-    selectedRoleIds.value = selectedRoleIds.value.filter(id => id !== roleId)
-  }
+function openEdit(user: UserRow) {
+  selectedUser.value = user
+  editOpen.value = true
+}
+
+function openRoleAssignment(user: UserRow) {
+  selectedUser.value = user
+  rolesOpen.value = true
 }
 
 function confirmDelete(user: UserRow) {
   userToDelete.value = user
   deleteOpen.value = true
-}
-
-async function deleteUser() {
-  if (!userToDelete.value)
-    return
-  deleting.value = true
-  try {
-    await $fetch(`/api/admin/users/${userToDelete.value.id}` as const, { method: 'DELETE' })
-    toast.add({ title: 'User deleted', color: 'success', icon: 'i-lucide-check-circle' })
-    deleteOpen.value = false
-    userToDelete.value = null
-    await refresh()
-  }
-  catch (err) {
-    onError(err, 'Failed to delete user')
-  }
-  finally {
-    deleting.value = false
-  }
 }
 
 function getActionItems(user: UserRow) {
@@ -348,7 +191,7 @@ function getActionItems(user: UserRow) {
     [{ label: 'Edit user', icon: 'i-lucide-pencil', onSelect: () => openEdit(user) }],
     [{ label: 'Manage roles', icon: 'i-lucide-user-round-cog', onSelect: () => openRoleAssignment(user) }],
     [{ label: 'Disable user', icon: 'i-lucide-pause', color: 'warning' as const, onSelect: () => toggleStatus(user) }],
-    [{ label: 'Reset password', icon: 'i-lucide-key-round', onSelect: () => resetPassword(user) }],
+    [{ label: 'Reset password', icon: 'i-lucide-key-round', onSelect: () => resetUserPassword(user) }],
   ]
   if (can('user:delete')) {
     items.push([{ label: 'Delete user', icon: 'i-lucide-trash', color: 'error' as const, onSelect: () => confirmDelete(user) }])
@@ -373,70 +216,14 @@ function getActionItems(user: UserRow) {
       />
     </div>
 
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 py-4">
-      <UCard variant="subtle" class="relative overflow-hidden">
-        <div class="flex items-center gap-3">
-          <div class="shrink-0 rounded-full bg-info/10 p-2.5">
-            <UIcon name="i-lucide-users" class="size-5 text-info" />
-          </div>
-          <div>
-            <p class="text-lg font-bold">
-              {{ totalCount }}
-            </p>
-            <p class="text-xs text-muted">
-              Total
-            </p>
-          </div>
-        </div>
-      </UCard>
-      <UCard variant="subtle" class="relative overflow-hidden">
-        <div class="flex items-center gap-3">
-          <div class="shrink-0 rounded-full bg-success/10 p-2.5">
-            <UIcon name="i-lucide-check-circle" class="size-5 text-success" />
-          </div>
-          <div>
-            <p class="text-lg font-bold">
-              {{ activeCount }}
-            </p>
-            <p class="text-xs text-muted">
-              Active
-            </p>
-          </div>
-        </div>
-      </UCard>
-      <UCard variant="subtle" class="relative overflow-hidden">
-        <div class="flex items-center gap-3">
-          <div class="shrink-0 rounded-full bg-warning/10 p-2.5">
-            <UIcon name="i-lucide-clock" class="size-5 text-warning" />
-          </div>
-          <div>
-            <p class="text-lg font-bold">
-              {{ pendingCount }}
-            </p>
-            <p class="text-xs text-muted">
-              Pending
-            </p>
-          </div>
-        </div>
-      </UCard>
-      <UCard variant="subtle" class="relative overflow-hidden">
-        <div class="flex items-center gap-3">
-          <div class="shrink-0 rounded-full bg-error/10 p-2.5">
-            <UIcon name="i-lucide-pause-circle" class="size-5 text-error" />
-          </div>
-          <div>
-            <p class="text-lg font-bold">
-              {{ disabledCount }}
-            </p>
-            <p class="text-xs text-muted">
-              Disabled
-            </p>
-          </div>
-        </div>
-      </UCard>
-    </div>
+    <UserStatCards
+      :total="totalCount"
+      :active="activeCount"
+      :pending="pendingCount"
+      :disabled="disabledCount"
+    />
 
-    <div class="flex items-center  px-4 py-3.5 border-b border-accented justify-between gap-4 p-4 w-full overflow-x-auto">
+    <div class="flex items-center px-4 py-3.5 border-b border-accented justify-between gap-4 w-full overflow-x-auto">
       <div class="flex items-center gap-2 flex-1">
         <UInput v-model="search" icon="i-lucide-search" placeholder="Search name or email..." class="w-64" />
       </div>
@@ -459,6 +246,7 @@ function getActionItems(user: UserRow) {
         </div>
       </div>
     </div>
+
     <UTable
       ref="table"
       v-model:pagination="pagination"
@@ -561,176 +349,34 @@ function getActionItems(user: UserRow) {
     </div>
   </div>
 
-  <UModal v-model:open="inviteOpen" title="Invite user" description="Set up a new user and send an invitation email">
-    <UForm
-      :key="inviteOpen ? 'invite-open' : 'invite-closed'"
-      :schema="inviteSchema"
-      :state="inviteState"
-      class="space-y-0"
-      @submit="sendInvite"
-    >
-      <template #body>
-        <div class="max-w-sm mx-auto space-y-5 py-1">
-          <UFormField name="email" label="Email" required hint="Required">
-            <UInput v-model="inviteState.email" type="email" placeholder="user@example.com" class="w-full" />
-          </UFormField>
-          <UFormField name="name" label="Name">
-            <UInput v-model="inviteState.name" placeholder="Full name" class="w-full" />
-          </UFormField>
-          <UFormField name="payrollId" label="Payroll ID" hint="Max 6 characters">
-            <UInput v-model="inviteState.payrollId" placeholder="e.g. 000001" maxlength="6" class="w-full" />
-          </UFormField>
-          <div class="grid grid-cols-2 gap-4">
-            <UFormField name="locationId" label="Location">
-              <USelect
-                v-model="inviteState.locationId"
-                :items="orgUnits ?? []"
-                value-key="id"
-                label-key="name"
-                :loading="!orgUnits"
-                placeholder="Select location"
-                class="w-full"
-              />
-            </UFormField>
-            <UFormField name="jobRoleId" label="Job Role">
-              <USelect
-                v-model="inviteState.jobRoleId"
-                :items="jobRoles ?? []"
-                value-key="id"
-                label-key="name"
-                :loading="!jobRoles"
-                placeholder="Select job role"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
-          <UFormField name="role" label="Initial role" required hint="Required">
-            <USelect v-model="inviteState.role" :items="roleOptions" class="w-full" />
-          </UFormField>
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-3">
-          <UButton label="Cancel" color="neutral" variant="outline" @click="inviteOpen = false" />
-          <UButton type="submit" :loading="inviting" label="Send invite" />
-        </div>
-      </template>
-    </UForm>
-  </UModal>
+  <UserInviteModal
+    v-model:open="inviteOpen"
+    :role-options="roleOptions"
+    :org-units="orgUnits"
+    :job-roles="jobRoles"
+    @saved="refresh()"
+  />
 
-  <UModal v-model:open="editOpen" :title="`Edit user — ${selectedUser?.name || selectedUser?.email || ''}`" description="Update user details">
-    <UForm
-      :key="editOpen ? 'edit-open' : 'edit-closed'"
-      :schema="editSchema"
-      :state="editState"
-      class="space-y-0"
-      @submit="saveUser"
-    >
-      <template #body>
-        <div class="max-w-sm mx-auto space-y-5 py-1">
-          <UFormField name="name" label="Name">
-            <UInput v-model="editState.name" class="w-full" />
-          </UFormField>
-          <UFormField name="payrollId" label="Payroll ID">
-            <UInput v-model="editState.payrollId" maxlength="6" class="w-full" />
-          </UFormField>
-          <UFormField name="email" label="Email">
-            <UInput v-model="editState.email" type="email" class="w-full" />
-          </UFormField>
-          <div class="grid grid-cols-2 gap-4">
-            <UFormField name="locationId" label="Location">
-              <USelect
-                v-model="editState.locationId"
-                :items="orgUnits ?? []"
-                value-key="id"
-                label-key="name"
-                :loading="!orgUnits"
-                placeholder="Select location"
-                class="w-full"
-              />
-            </UFormField>
-            <UFormField name="jobRoleId" label="Job Role">
-              <USelect
-                v-model="editState.jobRoleId"
-                :items="jobRoles ?? []"
-                value-key="id"
-                label-key="name"
-                :loading="!jobRoles"
-                placeholder="Select job role"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
-          <UFormField name="role" label="Role" required>
-            <USelect v-model="editState.role" :items="roleOptions" class="w-full" />
-          </UFormField>
-          <UFormField name="status" label="Status" required>
-            <USelect v-model="editState.status" :items="editStatusOptions" class="w-full" />
-          </UFormField>
-        </div>
-      </template>
-      <template #footer="{ close }">
-        <div class="flex justify-end gap-3">
-          <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
-          <UButton type="submit" :loading="saving" label="Save" />
-        </div>
-      </template>
-    </UForm>
-  </UModal>
+  <UserEditModal
+    v-model:open="editOpen"
+    :user="selectedUser"
+    :role-options="roleOptions"
+    :org-units="orgUnits"
+    :job-roles="jobRoles"
+    @saved="refresh()"
+  />
 
-  <UModal v-model:open="rolesOpen" :title="`Manage roles — ${selectedUser?.name || selectedUser?.email || ''}`" description="Select all roles this user should have">
-    <template #body>
-      <div v-if="rolesLoading" class="flex items-center justify-center gap-2 py-8">
-        <UIcon name="i-lucide-loader" class="size-4 animate-spin" />
-        <span class="text-sm text-muted">Loading roles...</span>
-      </div>
-      <div v-else-if="!roles?.length" class="py-8 text-center text-sm text-muted">
-        No roles defined yet. Contact an administrator.
-      </div>
-      <div v-else class="space-y-3">
-        <div v-for="r in (roles as RoleRow[])" :key="r.id" class="flex items-center gap-3">
-          <UCheckbox
-            :id="r.id"
-            :model-value="selectedRoleIds.includes(r.id)"
-            @update:model-value="(v: boolean | 'indeterminate') => handleRoleCheckbox(r.id, v)"
-          >
-            <template #label>
-              <span class="font-medium">{{ r.name }}</span>
-              <span v-if="r.description" class="block text-xs text-muted">{{ r.description }}</span>
-            </template>
-          </UCheckbox>
-        </div>
-      </div>
-    </template>
-    <template #footer="{ close }">
-      <div class="flex justify-end gap-3">
-        <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
-        <UButton label="Save" :loading="saving" @click="saveUserRoles" />
-      </div>
-    </template>
-  </UModal>
+  <UserRoleModal
+    v-model:open="rolesOpen"
+    :user="selectedUser"
+    :roles="(roles ?? []) as any[]"
+    :loading="!roles"
+    @saved="refresh()"
+  />
 
-  <UModal v-model:open="deleteOpen" title="Delete user" description="This action cannot be undone">
-    <template #body>
-      <div class="max-w-sm mx-auto space-y-5 py-1">
-        <div class="flex items-start gap-3">
-          <UIcon name="i-lucide-alert-triangle" class="size-5 text-error shrink-0 mt-0.5" />
-          <div>
-            <p class="text-sm">
-              Are you sure you want to delete <strong>{{ userToDelete?.name || userToDelete?.email }}</strong>?
-            </p>
-            <p class="text-xs text-muted mt-2">
-              This will permanently remove the user, their authentication records, custom role assignments, and invitations. This action cannot be undone.
-            </p>
-          </div>
-        </div>
-      </div>
-    </template>
-    <template #footer="{ close }">
-      <div class="flex justify-end gap-3">
-        <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
-        <UButton label="Delete" color="error" :loading="deleting" @click="deleteUser" />
-      </div>
-    </template>
-  </UModal>
+  <UserDeleteModal
+    v-model:open="deleteOpen"
+    :user="userToDelete"
+    @saved="refresh(); userToDelete = null"
+  />
 </template>
