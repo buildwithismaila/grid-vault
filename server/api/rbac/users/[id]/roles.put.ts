@@ -22,6 +22,13 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Get role names for audit before replacing
+  let roleNames: string[] = []
+  if (body.roleIds.length > 0) {
+    const roles = await db.select({ name: role.name }).from(role).where(inArray(role.id, body.roleIds))
+    roleNames = roles.map(r => r.name)
+  }
+
   // Replace all roles for the user
   await db.delete(userRole).where(eq(userRole.userId, id))
 
@@ -31,5 +38,6 @@ export default defineEventHandler(async (event) => {
     )
   }
 
+  logAuditEvent(event, { action: 'USER_ROLES_CHANGED', targetUserId: id, details: { roles: roleNames } })
   return { success: true }
 })

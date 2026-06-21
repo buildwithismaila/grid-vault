@@ -1,4 +1,4 @@
-export const RESOURCES = ['user', 'org_unit', 'job_role', 'inventory', 'asset', 'report'] as const
+export const RESOURCES = ['user', 'org_unit', 'job_role', 'inventory', 'asset', 'report', 'audit'] as const
 
 export const ACTIONS = ['create', 'read', 'update', 'delete'] as const
 
@@ -30,6 +30,10 @@ export const PERMISSIONS = {
   REPORT_READ: 'report:read',
   REPORT_UPDATE: 'report:update',
   REPORT_DELETE: 'report:delete',
+  AUDIT_CREATE: 'audit:create',
+  AUDIT_READ: 'audit:read',
+  AUDIT_UPDATE: 'audit:update',
+  AUDIT_DELETE: 'audit:delete',
 } as const
 
 export type PermissionName = typeof PERMISSIONS[keyof typeof PERMISSIONS]
@@ -51,6 +55,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   inventory: 'Inventory',
   asset: 'Assets',
   report: 'Reports',
+  audit: 'Audit Log',
 }
 
 export const RESOURCE_GROUPS = [
@@ -65,6 +70,12 @@ export const RESOURCE_GROUPS = [
     label: 'Domain Resources',
     icon: 'i-lucide-blocks',
     resources: ['inventory', 'asset', 'report'] as const,
+  },
+  {
+    key: 'security',
+    label: 'Security Resources',
+    icon: 'i-lucide-shield-alert',
+    resources: ['audit'] as const,
   },
 ] as const
 

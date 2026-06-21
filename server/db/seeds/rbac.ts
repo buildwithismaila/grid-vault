@@ -36,6 +36,10 @@ const permDescriptions: Record<string, string> = {
   'report:read': 'View existing reports',
   'report:update': 'Modify saved reports',
   'report:delete': 'Delete reports',
+  'audit:create': 'Generate audit trail entries',
+  'audit:read': 'View security audit logs',
+  'audit:update': 'Modify audit log entries',
+  'audit:delete': 'Purge audit log entries',
 }
 
 async function seedPermissions(db: ReturnType<typeof useDb>) {
@@ -55,146 +59,183 @@ async function seedPermissions(db: ReturnType<typeof useDb>) {
   }
 }
 
-const seedRoleDefs: Record<string, string[]> = {
-  'Superadmin': [
-    'user:create',
-    'user:read',
-    'user:update',
-    'user:delete',
-    'org_unit:create',
-    'org_unit:read',
-    'org_unit:update',
-    'org_unit:delete',
-    'job_role:create',
-    'job_role:read',
-    'job_role:update',
-    'job_role:delete',
-    'inventory:create',
-    'inventory:read',
-    'inventory:update',
-    'inventory:delete',
-    'asset:create',
-    'asset:read',
-    'asset:update',
-    'asset:delete',
-    'report:create',
-    'report:read',
-    'report:update',
-    'report:delete',
-  ],
-  'Admin': [
-    'user:create',
-    'user:read',
-    'user:update',
-    'user:delete',
-    'org_unit:create',
-    'org_unit:read',
-    'org_unit:update',
-    'org_unit:delete',
-    'job_role:create',
-    'job_role:read',
-    'job_role:update',
-    'job_role:delete',
-    'inventory:create',
-    'inventory:read',
-    'inventory:update',
-    'inventory:delete',
-    'asset:create',
-    'asset:read',
-    'asset:update',
-    'asset:delete',
-    'report:create',
-    'report:read',
-    'report:update',
-    'report:delete',
-  ],
-  'HQ Asset Manager': [
-    'user:read',
-    'org_unit:read',
-    'job_role:read',
-    'inventory:create',
-    'inventory:read',
-    'inventory:update',
-    'asset:create',
-    'asset:read',
-    'asset:update',
-    'asset:delete',
-    'report:read',
-  ],
-  'Regional Technical Manager': [
-    'user:read',
-    'org_unit:read',
-    'job_role:read',
-    'inventory:read',
-    'asset:read',
-    'report:read',
-  ],
-  'Technical Manager': [
-    'user:read',
-    'org_unit:read',
-    'job_role:read',
-    'inventory:read',
-    'inventory:update',
-    'asset:read',
-    'asset:update',
-    'report:read',
-  ],
-  'Service Centre Technician': [
-    'user:read',
-    'org_unit:read',
-    'job_role:read',
-    'inventory:read',
-    'inventory:update',
-    'asset:read',
-    'asset:update',
-  ],
-  'Finance Officer': [
-    'user:read',
-    'org_unit:read',
-    'job_role:read',
-    'inventory:read',
-    'asset:read',
-    'report:create',
-    'report:read',
-    'report:update',
-  ],
-  'Stores Officer': [
-    'user:read',
-    'org_unit:read',
-    'inventory:create',
-    'inventory:read',
-    'inventory:update',
-    'inventory:delete',
-    'asset:read',
-    'report:read',
-  ],
-  'Auditor': [
-    'user:read',
-    'org_unit:read',
-    'job_role:read',
-    'inventory:read',
-    'asset:read',
-    'report:read',
-  ],
-  'Viewer': [
-    'user:read',
-    'org_unit:read',
-    'job_role:read',
-    'report:read',
-  ],
+interface SeedRoleDef {
+  description: string
+  permissions: string[]
+}
+
+const seedRoleDefs: Record<string, SeedRoleDef> = {
+  'Superadmin': {
+    description: 'Full system access with all permissions. Can manage users, roles, permissions, and all system resources.',
+    permissions: [
+      'audit:read',
+      'user:create',
+      'user:read',
+      'user:update',
+      'user:delete',
+      'org_unit:create',
+      'org_unit:read',
+      'org_unit:update',
+      'org_unit:delete',
+      'job_role:create',
+      'job_role:read',
+      'job_role:update',
+      'job_role:delete',
+      'inventory:create',
+      'inventory:read',
+      'inventory:update',
+      'inventory:delete',
+      'asset:create',
+      'asset:read',
+      'asset:update',
+      'asset:delete',
+      'report:create',
+      'report:read',
+      'report:update',
+      'report:delete',
+    ],
+  },
+  'Admin': {
+    description: 'System administration with full CRUD access to users, roles, resources, and audit logs.',
+    permissions: [
+      'audit:read',
+      'user:create',
+      'user:read',
+      'user:update',
+      'user:delete',
+      'org_unit:create',
+      'org_unit:read',
+      'org_unit:update',
+      'org_unit:delete',
+      'job_role:create',
+      'job_role:read',
+      'job_role:update',
+      'job_role:delete',
+      'inventory:create',
+      'inventory:read',
+      'inventory:update',
+      'inventory:delete',
+      'asset:create',
+      'asset:read',
+      'asset:update',
+      'asset:delete',
+      'report:create',
+      'report:read',
+      'report:update',
+      'report:delete',
+    ],
+  },
+  'HQ Asset Manager': {
+    description: 'Manages inventory items and asset register at headquarters level.',
+    permissions: [
+      'user:read',
+      'org_unit:read',
+      'job_role:read',
+      'inventory:create',
+      'inventory:read',
+      'inventory:update',
+      'asset:create',
+      'asset:read',
+      'asset:update',
+      'asset:delete',
+      'report:read',
+    ],
+  },
+  'Regional Technical Manager': {
+    description: 'Oversees technical operations and can view inventory, assets, and reports across a region.',
+    permissions: [
+      'user:read',
+      'org_unit:read',
+      'job_role:read',
+      'inventory:read',
+      'asset:read',
+      'report:read',
+    ],
+  },
+  'Technical Manager': {
+    description: 'Manages technical teams with read access to inventory and assets, plus ability to update stock levels.',
+    permissions: [
+      'user:read',
+      'org_unit:read',
+      'job_role:read',
+      'inventory:read',
+      'inventory:update',
+      'asset:read',
+      'asset:update',
+      'report:read',
+    ],
+  },
+  'Service Centre Technician': {
+    description: 'Service centre staff who can view and update inventory and asset records.',
+    permissions: [
+      'user:read',
+      'org_unit:read',
+      'job_role:read',
+      'inventory:read',
+      'inventory:update',
+      'asset:read',
+      'asset:update',
+    ],
+  },
+  'Finance Officer': {
+    description: 'Handles financial reporting with access to reports, inventory, and asset records.',
+    permissions: [
+      'user:read',
+      'org_unit:read',
+      'job_role:read',
+      'inventory:read',
+      'asset:read',
+      'report:create',
+      'report:read',
+      'report:update',
+    ],
+  },
+  'Stores Officer': {
+    description: 'Manages store inventory with full CRUD on inventory items and read access to assets.',
+    permissions: [
+      'user:read',
+      'org_unit:read',
+      'inventory:create',
+      'inventory:read',
+      'inventory:update',
+      'inventory:delete',
+      'asset:read',
+      'report:read',
+    ],
+  },
+  'Auditor': {
+    description: 'Read-only access to users, organisation structure, inventory, assets, and reports for auditing purposes.',
+    permissions: [
+      'user:read',
+      'org_unit:read',
+      'job_role:read',
+      'inventory:read',
+      'asset:read',
+      'report:read',
+    ],
+  },
+  'Viewer': {
+    description: 'Minimal read-only access to users, organisation units, job roles, and reports.',
+    permissions: [
+      'user:read',
+      'org_unit:read',
+      'job_role:read',
+      'report:read',
+    ],
+  },
 }
 
 async function seedRoles(db: ReturnType<typeof useDb>) {
-  for (const roleName of Object.keys(seedRoleDefs)) {
+  for (const [roleName, def] of Object.entries(seedRoleDefs)) {
     await db.insert(role).values({
       name: roleName,
-      description: `${roleName} role`,
+      description: def.description,
     }).onConflictDoNothing({ target: role.name })
   }
 }
 
 async function seedRolePermissions(db: ReturnType<typeof useDb>) {
-  for (const [roleName, permNames] of Object.entries(seedRoleDefs)) {
+  for (const [roleName, def] of Object.entries(seedRoleDefs)) {
     const [roleRow] = await db.select().from(role).where(eq(role.name, roleName)).limit(1)
     if (!roleRow)
       continue
@@ -202,7 +243,7 @@ async function seedRolePermissions(db: ReturnType<typeof useDb>) {
     const perms = await db
       .select()
       .from(permission)
-      .where(inArray(permission.name, permNames))
+      .where(inArray(permission.name, def.permissions))
 
     for (const p of perms) {
       await db.insert(rolePermission).values({

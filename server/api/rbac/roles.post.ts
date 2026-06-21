@@ -18,5 +18,6 @@ export default defineEventHandler(async (event) => {
   }).returning()
 
   await invalidateCache('rbac-roles')
+  logAuditEvent(event, { action: 'ROLE_CREATED', resourceType: 'role', resourceId: created.id, details: { name: body.name } })
   return created
 })

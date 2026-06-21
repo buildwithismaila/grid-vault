@@ -26,8 +26,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 409, statusMessage: 'MFA already enabled' })
 
   const valid = await verifyPassword(row.passwordHash, password)
-  if (!valid)
+  if (!valid) {
+    logAuditEvent(event, { action: 'MFA_SETUP', outcome: 'FAILURE', details: { reason: 'invalid_password' } })
     throw createError({ statusCode: 403, statusMessage: 'Invalid password' })
+  }
 
   const { secret, otpauth } = generateMFASecret(row.email)
 

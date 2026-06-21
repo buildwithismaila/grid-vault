@@ -2,10 +2,14 @@
 import type { NavigationMenuItem } from '@nuxt/ui'
 
 const links = [[{
+  label: 'Audit Logs',
+  icon: 'i-lucide-clipboard-list',
+  to: '/admin/audit',
+  exact: true,
+}, {
   label: 'Users',
   icon: 'i-lucide-user',
   to: '/admin/users',
-  exact: true,
 }, {
   label: 'Roles',
   icon: 'i-lucide-shield',

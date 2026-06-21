@@ -27,10 +27,13 @@ export default defineEventHandler(async (event) => {
   if (!row.mfaSecret)
     throw createError({ statusCode: 400, statusMessage: 'No MFA secret found. Run setup first.' })
 
-  if (!verifyMFAToken(token, row.mfaSecret))
+  if (!verifyMFAToken(token, row.mfaSecret)) {
+    logAuditEvent(event, { action: 'MFA_VERIFIED', outcome: 'FAILURE', details: { reason: 'invalid_code' } })
     throw createError({ statusCode: 401, statusMessage: 'Invalid verification code' })
+  }
 
   await db.update(auth).set({ mfaEnabled: true }).where(eq(auth.id, row.id))
 
+  logAuditEvent(event, { action: 'MFA_VERIFIED', resourceType: 'auth' })
   return { success: true }
 })

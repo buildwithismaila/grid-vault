@@ -35,5 +35,6 @@ export default defineEventHandler(async (event) => {
       .where(eq(passwordResetToken.id, resetRecord.id))
   })
 
+  logAuditEvent(event, { action: 'PASSWORD_RESET_COMPLETED', resourceType: 'auth', resourceId: resetRecord.userId })
   return { success: true }
 })

@@ -31,10 +31,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'Invalid password' })
 
   const codeValid = verifyMFAToken(code, row.mfaSecret)
-  if (!codeValid)
+  if (!codeValid) {
+    logAuditEvent(event, { action: 'MFA_DISABLED', outcome: 'FAILURE', details: { reason: 'invalid_code' } })
     throw createError({ statusCode: 403, statusMessage: 'Invalid authentication code' })
+  }
 
   await db.update(auth).set({ mfaSecret: null, mfaEnabled: false }).where(eq(auth.id, row.id))
 
+  logAuditEvent(event, { action: 'MFA_DISABLED', resourceType: 'auth' })
   return { success: true }
 })

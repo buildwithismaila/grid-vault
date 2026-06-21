@@ -26,5 +26,6 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  logAuditEvent(event, { action: 'PASSWORD_RESET_REQUESTED', resourceType: 'auth', details: { email } })
   return { success: true, message: 'If the email exists, a reset link has been sent' }
 })

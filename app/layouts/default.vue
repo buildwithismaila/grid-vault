@@ -11,18 +11,22 @@ const mainLinks = computed<NavigationMenuItem[]>(() => {
   ]
 
   if (can('user:read')) {
+    const children: NavigationMenuItem[] = [
+      { label: 'Users', icon: 'i-lucide-users', to: '/admin/users' },
+      { label: 'Roles', icon: 'i-lucide-key-round', to: '/admin/roles' },
+      { label: 'Permissions', icon: 'i-lucide-shield-check', to: '/admin/permissions' },
+      { label: 'Org Units', icon: 'i-lucide-building', to: '/admin/org-units' },
+      { label: 'Job Roles', icon: 'i-lucide-briefcase', to: '/admin/job-roles' },
+    ]
+    if (can('audit:read')) {
+      children.unshift({ label: 'Audit Log', icon: 'i-lucide-shield-alert', to: '/admin/audit' })
+    }
     items.push({
       label: 'Administration',
       icon: 'i-lucide-shield',
       type: 'trigger',
       defaultOpen: route.path.startsWith('/admin'),
-      children: [
-        { label: 'Users', icon: 'i-lucide-users', to: '/admin/users' },
-        { label: 'Roles', icon: 'i-lucide-key-round', to: '/admin/roles' },
-        { label: 'Permissions', icon: 'i-lucide-shield-check', to: '/admin/permissions' },
-        { label: 'Org Units', icon: 'i-lucide-building', to: '/admin/org-units' },
-        { label: 'Job Roles', icon: 'i-lucide-briefcase', to: '/admin/job-roles' },
-      ],
+      children,
     })
   }
 

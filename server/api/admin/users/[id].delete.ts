@@ -16,5 +16,6 @@ export default defineEventHandler(async (event) => {
 
   await db.delete(user).where(eq(user.id, id))
 
+  logAuditEvent(event, { action: 'USER_DELETED', targetUserId: id, details: { email: existing.email } })
   return { success: true }
 })

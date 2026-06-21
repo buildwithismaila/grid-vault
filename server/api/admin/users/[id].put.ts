@@ -51,6 +51,8 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  logAuditEvent(event, { action: 'USER_UPDATED', targetUserId: id, details: { fields: Object.keys(body) } })
+
   const [updated] = await db.select().from(user).where(eq(user.id, id)).limit(1)
   return updated
 })

@@ -50,5 +50,6 @@ export default defineEventHandler(async (event) => {
       .where(eq(userInvitation.id, invite.id))
   })
 
+  logAuditEvent(event, { action: 'ACCEPT_INVITE', targetUserId: invite.userId, details: { email: invite.email } })
   return { success: true, message: 'Account activated. You can now log in.' }
 })

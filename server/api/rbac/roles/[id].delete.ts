@@ -9,11 +9,12 @@ export default defineEventHandler(async (event) => {
 
   const db = useDb()
 
-  const [existing] = await db.select({ id: role.id }).from(role).where(eq(role.id, id)).limit(1)
+  const [existing] = await db.select({ id: role.id, name: role.name }).from(role).where(eq(role.id, id)).limit(1)
   if (!existing)
     throw createError({ statusCode: 404, statusMessage: 'Role not found' })
 
   await db.delete(role).where(eq(role.id, id))
   await invalidateCache('rbac-roles')
+  logAuditEvent(event, { action: 'ROLE_DELETED', resourceType: 'role', resourceId: id, details: { name: existing.name } })
   return { success: true }
 })

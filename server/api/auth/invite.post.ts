@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
     expiresAt: new Date(Date.now() + AUTH.INVITE_EXPIRY_MS),
   })
 
-  // Auto-assign the primary role via userRole so the user gets permissions
+  // Auto-assign the role via userRole so the user gets permissions
   if (role) {
     const [roleRow] = await db.select({ id: roleTable.id }).from(roleTable).where(eq(roleTable.name, role)).limit(1)
     if (roleRow) {
@@ -56,5 +56,6 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  logAuditEvent(event, { action: 'INVITE_SENT', targetUserId: newUser.id, details: { email, role } })
   return { success: true, message: 'Invitation sent' }
 })

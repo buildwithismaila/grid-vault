@@ -5,7 +5,7 @@ import { loginSchema } from '#shared/schemas/user'
 import { AUTH } from '#shared/utils/constants'
 
 export default defineEventHandler(async (event) => {
-  const { email, password } = await validateBody(event, loginSchema)
+  const { email } = await validateBody(event, loginSchema)
   const db = useDb()
 
   const [row] = await db
@@ -15,12 +15,17 @@ export default defineEventHandler(async (event) => {
     .innerJoin(user, eq(auth.userId, user.id))
     .limit(1)
 
-  if (!row)
+  if (!row) {
+    logAuditEvent(event, { action: 'LOGIN_FAILED', outcome: 'FAILURE', details: { email } })
     throw createError({ statusCode: 401, statusMessage: 'Invalid credentials' })
+  }
 
-  if (row.auth.lockedUntil && row.auth.lockedUntil > new Date())
+  if (row.auth.lockedUntil && row.auth.lockedUntil > new Date()) {
+    logAuditEvent(event, { action: 'LOGIN_FAILED', outcome: 'FAILURE', details: { email, reason: 'account_locked' } })
     throw createError({ statusCode: 423, statusMessage: 'Account is locked' })
+  }
 
+  const { password } = await validateBody(event, loginSchema)
   const valid = await verifyPassword(row.auth.passwordHash, password)
   if (!valid) {
     // Atomic increment — prevents race condition from concurrent requests
@@ -37,8 +42,10 @@ export default defineEventHandler(async (event) => {
       await db.update(auth).set({
         lockedUntil: new Date(Date.now() + AUTH.LOCKOUT_DURATION_MS),
       }).where(eq(auth.id, row.auth.id))
+      logAuditEvent(event, { action: 'ACCOUNT_LOCKED', outcome: 'FAILURE', details: { email, attempts: updated.attempts } })
     }
 
+    logAuditEvent(event, { action: 'LOGIN_FAILED', outcome: 'FAILURE', details: { email } })
     throw createError({ statusCode: 401, statusMessage: 'Invalid credentials' })
   }
 
@@ -59,5 +66,6 @@ export default defineEventHandler(async (event) => {
   const sessionUser = await buildSessionUserFromRow(row)
   await setUserSession(event, { user: sessionUser })
 
+  logAuditEvent(event, { action: 'LOGIN_SUCCESS', resourceType: 'auth', details: { email } })
   return sessionUser
 })

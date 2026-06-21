@@ -36,5 +36,6 @@ export default defineEventHandler(async (event) => {
     await setUserSession(event, { user: session.user })
   }
 
+  logAuditEvent(event, { action: 'PASSWORD_CHANGED', resourceType: 'auth' })
   return { success: true }
 })

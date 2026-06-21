@@ -31,6 +31,7 @@ export default defineEventHandler(async (event) => {
     expiresAt: new Date(Date.now() + AUTH.RESET_TOKEN_EXPIRY_MS),
   })
 
+  logAuditEvent(event, { action: 'PASSWORD_RESET_ADMIN', targetUserId: id, details: { email: existingAuth.email } })
   return {
     success: true,
     message: 'Password reset link generated',
