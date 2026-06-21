@@ -15,11 +15,9 @@ export default defineEventHandler(async (event) => {
 
   const db = useDb()
 
-  const [existing] = await db.select().from(role).where(eq(role.id, id)).limit(1)
+  const [existing] = await db.select({ id: role.id }).from(role).where(eq(role.id, id)).limit(1)
   if (!existing)
     throw createError({ statusCode: 404, statusMessage: 'Role not found' })
-  if (existing.isSystem)
-    throw createError({ statusCode: 400, statusMessage: 'Cannot modify system role permissions' })
 
   const body = await validateBody(event, setPermissionsSchema)
 

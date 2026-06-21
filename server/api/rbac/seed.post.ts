@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   const [superadmin] = await db
     .select({ id: user.id })
     .from(user)
-    .where(eq(user.role, 'Superadmin'))
+    .where(eq(user.isSuperadmin, true))
     .limit(1)
 
   if (superadmin) {

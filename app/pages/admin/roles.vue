@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PermissionRow, RoleRow } from '#shared/types/admin'
-import { ACTIONS } from '#shared/utils/permissions'
+import { ACTIONS, RESOURCE_GROUPS, RESOURCE_LABELS } from '#shared/utils/permissions'
 import type { TableColumn } from '@nuxt/ui'
 
 const { isSuperadmin } = useAuthorization()
@@ -190,56 +190,24 @@ function toggleEditAll(resource: string) {
   }
 }
 
-const resourceLabels: Record<string, string> = {
-  user: 'Users',
-  org_unit: 'Organisation Units',
-  job_role: 'Job Roles',
-  inventory: 'Inventory',
-  asset: 'Assets',
-  report: 'Reports',
-}
-
-const groupMeta = {
-  system: { label: 'System Resources', icon: 'i-lucide-shield' },
-  domain: { label: 'Domain Resources', icon: 'i-lucide-blocks' },
-} as const
-
 const resourceGroups = computed(() => {
   const perms = (permissions.value ?? []) as PermissionRow[]
-  const systemResources = ['user', 'org_unit', 'job_role'] as const
-  const domainResources = ['inventory', 'asset', 'report'] as const
-  return [
-    {
-      key: 'system',
-      ...groupMeta.system,
-      resources: systemResources.map((resource) => {
-        const resourcePerms = perms.filter(p => p.resource === resource)
-        return {
-          resource,
-          label: resourceLabels[resource] || resource,
-          permissions: ACTIONS.map(action => ({
-            action,
-            permission: resourcePerms.find(p => p.action === action) ?? null,
-          })),
-        }
-      }),
-    },
-    {
-      key: 'domain',
-      ...groupMeta.domain,
-      resources: domainResources.map((resource) => {
-        const resourcePerms = perms.filter(p => p.resource === resource)
-        return {
-          resource,
-          label: resourceLabels[resource] || resource,
-          permissions: ACTIONS.map(action => ({
-            action,
-            permission: resourcePerms.find(p => p.action === action) ?? null,
-          })),
-        }
-      }),
-    },
-  ]
+  return RESOURCE_GROUPS.map(group => ({
+    key: group.key,
+    label: group.label,
+    icon: group.icon,
+    resources: group.resources.map((resource) => {
+      const resourcePerms = perms.filter(p => p.resource === resource)
+      return {
+        resource,
+        label: RESOURCE_LABELS[resource] || resource,
+        permissions: ACTIONS.map(action => ({
+          action,
+          permission: resourcePerms.find(p => p.action === action) ?? null,
+        })),
+      }
+    }),
+  }))
 })
 
 function permissionCountForGroup(group: typeof resourceGroups.value[number], ids: string[]) {
@@ -282,8 +250,7 @@ function someSelectedInResource(ids: string[], resource: string) {
       :loading="rolesLoading"
     >
       <template #badge-cell="{ row }">
-        <UBadge v-if="row.original.isSystem" label="System" color="neutral" variant="subtle" size="sm" />
-        <span v-else-if="(row.original.permissionIds?.length || 0) > 0" class="text-xs text-muted">{{ row.original.permissionIds.length }} perm</span>
+        <span v-if="(row.original.permissionIds?.length || 0) > 0" class="text-xs text-muted">{{ row.original.permissionIds.length }} perm</span>
       </template>
 
       <template #userCount-cell="{ row }">
@@ -292,12 +259,12 @@ function someSelectedInResource(ids: string[], resource: string) {
       </template>
 
       <template #actions-cell="{ row }">
-        <div v-if="!row.original.isSystem" class="flex gap-1">
+        <div class="flex gap-1">
           <UTooltip text="Edit role">
-            <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" square @click="openEdit(row.original)" />
+            <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" square aria-label="Edit role" @click="openEdit(row.original)" />
           </UTooltip>
           <UTooltip text="Delete role">
-            <UButton icon="i-lucide-trash" color="error" variant="ghost" size="sm" square @click="confirmDelete(row.original)" />
+            <UButton icon="i-lucide-trash" color="error" variant="ghost" size="sm" square aria-label="Delete role" @click="confirmDelete(row.original)" />
           </UTooltip>
         </div>
       </template>
@@ -475,7 +442,7 @@ function someSelectedInResource(ids: string[], resource: string) {
       </div>
 
       <p class="text-xs text-muted mt-3">
-        This will also remove all permission assignments for this role. System roles cannot be deleted.
+        This will also remove all permission assignments for this role.
       </p>
     </template>
     <template #footer="{ close }">

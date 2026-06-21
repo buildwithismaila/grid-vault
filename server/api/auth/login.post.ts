@@ -1,6 +1,5 @@
 import { eq, sql } from 'drizzle-orm'
 import { auth } from '#server/db/schema/auth'
-import { role, userRole } from '#server/db/schema/rbac'
 import { user } from '#server/db/schema/user'
 import { loginSchema } from '#shared/schemas/user'
 import { AUTH } from '#shared/utils/constants'
@@ -24,12 +23,22 @@ export default defineEventHandler(async (event) => {
 
   const valid = await verifyPassword(row.auth.passwordHash, password)
   if (!valid) {
-    const newAttempts = row.auth.failedLoginAttempts + 1
-    const updateData: Record<string, unknown> = { failedLoginAttempts: newAttempts }
-    if (newAttempts >= AUTH.MAX_LOGIN_ATTEMPTS)
-      updateData.lockedUntil = new Date(Date.now() + AUTH.LOCKOUT_DURATION_MS)
+    // Atomic increment — prevents race condition from concurrent requests
+    await db.update(auth).set({
+      failedLoginAttempts: sql`${auth.failedLoginAttempts} + 1`,
+    }).where(eq(auth.id, row.auth.id))
 
-    await db.update(auth).set(updateData).where(eq(auth.id, row.auth.id))
+    const [updated] = await db.select({
+      attempts: auth.failedLoginAttempts,
+      lockedUntil: auth.lockedUntil,
+    }).from(auth).where(eq(auth.id, row.auth.id)).limit(1)
+
+    if (updated && updated.attempts >= AUTH.MAX_LOGIN_ATTEMPTS && !updated.lockedUntil) {
+      await db.update(auth).set({
+        lockedUntil: new Date(Date.now() + AUTH.LOCKOUT_DURATION_MS),
+      }).where(eq(auth.id, row.auth.id))
+    }
+
     throw createError({ statusCode: 401, statusMessage: 'Invalid credentials' })
   }
 
@@ -43,36 +52,11 @@ export default defineEventHandler(async (event) => {
   }).where(eq(auth.id, row.auth.id))
 
   if (row.auth.mfaEnabled) {
-    const mfaToken = createMfaChallenge(row.auth.userId)
+    const mfaToken = await createMfaChallenge(row.auth.userId)
     return { mfaRequired: true, mfaToken }
   }
 
-  let permissions: string[] = []
-  let roles: string[] = []
-
-  if (row.user.role !== 'Superadmin') {
-    const userRoles = await db
-      .select({ name: role.name })
-      .from(userRole)
-      .innerJoin(role, eq(userRole.roleId, role.id))
-      .where(eq(userRole.userId, row.user.id))
-
-    roles = userRoles.map(r => r.name)
-    permissions = await getUserPermissions(row.user.id)
-  }
-
-  const sessionUser = {
-    id: row.user.id,
-    payrollId: row.user.payrollId ?? '',
-    email: row.auth.email,
-    name: row.user.name ?? '',
-    avatarUrl: row.user.avatarUrl ?? '',
-    role: row.user.role,
-    locationId: row.user.locationId ?? '',
-    permissions,
-    roles,
-  }
-
+  const sessionUser = await buildSessionUserFromRow(row)
   await setUserSession(event, { user: sessionUser })
 
   return sessionUser

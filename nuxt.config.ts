@@ -23,7 +23,7 @@ export default defineNuxtConfig({
     sessionPassword: process.env.NUXT_SESSION_PASSWORD,
     initialEmail: '',
     initialPassword: '',
-    appUrl: process.env.NUXT_APP_URL || 'http://localhost:3000',
+    appUrl: process.env.NUXT_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'),
     emailFrom: process.env.NUXT_EMAIL_FROM || 'Grid Vault <onboarding@resend.dev>',
   },
   resend: {
@@ -34,6 +34,15 @@ export default defineNuxtConfig({
       baseName: 'migrations',
       dir: 'server/db/migrations',
     }],
+    storage: {
+      shield: process.env.NUXT_UPSTASH_KV_REST_API_URL
+        ? {
+            driver: 'upstash',
+            url: process.env.NUXT_UPSTASH_KV_REST_API_URL,
+            token: process.env.NUXT_UPSTASH_KV_REST_API_TOKEN,
+          }
+        : { driver: 'memory' },
+    },
   },
   vite: {
     optimizeDeps: {

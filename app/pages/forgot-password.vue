@@ -6,6 +6,7 @@ definePageMeta({ layout: 'auth' })
 
 const loading = ref(false)
 const submitted = ref(false)
+const networkError = ref('')
 
 const schema = z.object({
   email: z.email('Invalid email').toLowerCase().trim(),
@@ -24,8 +25,13 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     })
     submitted.value = true
   }
-  catch {
-    submitted.value = true
+  catch (err: any) {
+    if (!err.response) {
+      networkError.value = 'Could not reach the server. Please check your connection and try again.'
+    }
+    else {
+      submitted.value = true
+    }
   }
   finally {
     loading.value = false
@@ -46,10 +52,23 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       </div>
     </template>
 
-    <template v-if="submitted">
-      <p class="text-sm text-muted">
-        If an account with that email exists, a password reset link has been sent.
-      </p>
+    <template v-if="networkError">
+      <UAlert color="error" variant="subtle" :title="networkError" icon="i-lucide-alert-circle" />
+      <UButton label="Try again" color="neutral" variant="outline" block class="mt-4" @click="networkError = ''" />
+    </template>
+
+    <template v-else-if="submitted">
+      <div class="space-y-3">
+        <p class="text-sm text-muted">
+          If an account with that email exists, a password reset link has been sent.
+        </p>
+        <div class="rounded-lg bg-warning/10 border border-warning/20 p-3 flex items-start gap-2">
+          <UIcon name="i-lucide-mail-search" class="size-4 text-warning mt-0.5 shrink-0" />
+          <p class="text-xs text-muted">
+            Don't see it? Check your spam folder. The email comes from <strong class="text-default">Grid Vault</strong>.
+          </p>
+        </div>
+      </div>
       <UButton
         label="Back to login"
         color="neutral"

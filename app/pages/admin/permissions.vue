@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PermissionRow, RoleRow } from '#shared/types/admin'
+import { ACTION_LABELS, RESOURCE_GROUPS, RESOURCE_LABELS } from '#shared/utils/permissions'
 
 definePageMeta({
   middleware: async () => {
@@ -18,12 +19,7 @@ const loading = computed(() => permsStatus.value === 'pending' || permsStatus.va
 
 const seeding = ref(false)
 const refreshing = ref(false)
-const hideSystem = ref(false)
-
-const visibleRoles = computed(() => {
-  const allRoles = (roles.value ?? []) as RoleRow[]
-  return hideSystem.value ? allRoles.filter(r => !r.isSystem) : allRoles
-})
+const visibleRoles = computed(() => (roles.value ?? []) as RoleRow[])
 
 const dirtyRolesSet = reactive(new Set<string>())
 
@@ -138,28 +134,8 @@ function toggleExpandResource(res: string) {
     expandedResources.add(res)
 }
 
-const resourceLabels: Record<string, string> = {
-  user: 'Users',
-  org_unit: 'Organisation Units',
-  job_role: 'Job Roles',
-  inventory: 'Inventory',
-  asset: 'Assets',
-  report: 'Reports',
-}
-
-const actionLabels: Record<string, string> = {
-  create: 'Create',
-  read: 'Read',
-  update: 'Update',
-  delete: 'Delete',
-}
-
-const sectionOrder = ['system', 'domain'] as const
-
-const sectionMeta: Record<string, { label: string, icon: string, resources: readonly string[] }> = {
-  system: { label: 'System Resources', icon: 'i-lucide-shield', resources: ['user', 'org_unit', 'job_role'] },
-  domain: { label: 'Domain Resources', icon: 'i-lucide-blocks', resources: ['inventory', 'asset', 'report'] },
-}
+const sectionOrder = RESOURCE_GROUPS.map(g => g.key)
+const sectionMeta = Object.fromEntries(RESOURCE_GROUPS.map(g => [g.key, g]))
 </script>
 
 <template>
@@ -170,7 +146,7 @@ const sectionMeta: Record<string, { label: string, icon: string, resources: read
           Permission Matrix
         </h2>
         <p class="text-sm text-muted mt-1">
-          Toggle permissions on or off for each custom role. System roles are read-only.
+          Toggle permissions on or off for each role.
           Changes are saved in batch — click "Save changes" when done.
         </p>
       </div>
@@ -192,23 +168,17 @@ const sectionMeta: Record<string, { label: string, icon: string, resources: read
         <UIcon name="i-lucide-eye-off" class="size-10 text-muted" />
         <div class="text-center">
           <p class="text-sm font-medium">
-            No custom roles to display
+            No roles to display
           </p>
           <p class="text-xs text-muted mt-1">
-            All roles are system roles. Toggle "Show system roles" above to see them, or create custom roles in the Roles page
+            Create roles in the Roles page first
           </p>
         </div>
         <UButton icon="i-lucide-plus" label="Create role" to="/admin/roles" />
       </div>
 
       <div v-else>
-        <div class="flex items-center justify-between px-4 py-3 border-b border-accented">
-          <div class="flex items-center gap-3">
-            <div class="flex items-center gap-2">
-              <USwitch v-model="hideSystem" size="sm" />
-              <span class="text-sm text-muted">Hide system roles</span>
-            </div>
-          </div>
+        <div class="flex items-center justify-end px-4 py-3 border-b border-accented">
           <UButton
             icon="i-lucide-refresh-cw"
             color="neutral"
@@ -223,26 +193,24 @@ const sectionMeta: Record<string, { label: string, icon: string, resources: read
           <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-background/80 z-10 rounded-lg">
             <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-muted" />
           </div>
-          <table class="w-full min-w-[640px]">
+          <table class="w-full min-w-[640px]" role="grid" aria-label="Permission matrix">
             <thead>
               <tr class="border-b border-default">
-                <th class="text-left py-3 pr-4 text-sm font-medium text-muted w-44">
+                <th scope="col" class="text-left py-3 pr-4 text-sm font-medium text-muted w-44">
                   Permission
                 </th>
-                <th class="text-left py-3 pr-4 text-sm font-medium text-muted">
+                <th scope="col" class="text-left py-3 pr-4 text-sm font-medium text-muted">
                   Description
                 </th>
                 <th
                   v-for="r in visibleRoles"
                   :key="r.id"
+                  scope="col"
                   class="text-center py-3 px-3 text-sm font-medium text-muted w-28"
                 >
                   <div class="flex flex-col items-center gap-0.5">
                     <span class="truncate max-w-24" :title="r.name" :class="dirtyRolesSet.has(r.id) ? 'font-bold' : ''">{{ r.name }}</span>
-                    <div class="flex items-center gap-1">
-                      <UBadge v-if="r.isSystem" label="system" color="neutral" variant="subtle" size="sm" />
-                      <div v-else-if="dirtyRolesSet.has(r.id)" class="size-1.5 rounded-full bg-warning" />
-                    </div>
+                    <div v-if="dirtyRolesSet.has(r.id)" class="size-1.5 rounded-full bg-warning" />
                   </div>
                 </th>
               </tr>
@@ -280,7 +248,7 @@ const sectionMeta: Record<string, { label: string, icon: string, resources: read
                           :name="expandedResources.has(res) ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
                           class="size-4 text-muted shrink-0"
                         />
-                        <span class="text-sm font-medium">{{ resourceLabels[res] || res }}</span>
+                        <span class="text-sm font-medium">{{ RESOURCE_LABELS[res] || res }}</span>
                       </div>
                     </td>
                     <td
@@ -300,7 +268,7 @@ const sectionMeta: Record<string, { label: string, icon: string, resources: read
                       class="border-b border-default/50 hover:bg-elevated/50 transition-colors"
                     >
                       <td class="py-2.5 pr-4 text-sm pl-8">
-                        {{ actionLabels[p.action] || p.action }}
+                        {{ ACTION_LABELS[p.action] || p.action }}
                       </td>
                       <td class="py-2.5 pr-4">
                         <span class="text-xs text-muted">{{ p.description || '' }}</span>
@@ -312,15 +280,8 @@ const sectionMeta: Record<string, { label: string, icon: string, resources: read
                       >
                         <div class="flex items-center justify-center min-h-[28px]">
                           <USwitch
-                            v-if="!r.isSystem"
                             :model-value="getEffectivePerms(r.id, r.permissionIds).includes(p.id)"
                             @update:model-value="(v: boolean) => togglePerm(r.id, p.id, getEffectivePerms(r.id, r.permissionIds).includes(p.id))"
-                          />
-                          <UIcon
-                            v-else
-                            :name="r.permissionIds.includes(p.id) ? 'i-lucide-check' : 'i-lucide-minus'"
-                            class="size-4"
-                            :class="r.permissionIds.includes(p.id) ? 'text-success' : 'text-muted'"
                           />
                         </div>
                       </td>

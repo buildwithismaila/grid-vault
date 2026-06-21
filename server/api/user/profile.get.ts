@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
       name: user.name,
       payrollId: user.payrollId,
       avatarUrl: user.avatarUrl,
-      role: user.role,
+      isSuperadmin: user.isSuperadmin,
       status: user.status,
       email: auth.email,
       locationId: user.locationId,

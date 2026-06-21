@@ -2,8 +2,6 @@ import type { H3Event } from 'h3'
 import { eq } from 'drizzle-orm'
 import { permission, role, rolePermission, userRole } from '#server/db/schema/rbac'
 
-const SUPERADMIN_ROLE = 'Superadmin'
-
 /**
  * Fetch all permission names granted to a user via their roles.
  */
@@ -29,7 +27,7 @@ export async function hasPermission(event: H3Event, perm: string): Promise<boole
   const user = event.context.user
   if (!user)
     return false
-  if (user.role === SUPERADMIN_ROLE)
+  if (user.isSuperadmin)
     return true
 
   // Use cached permissions from middleware if available
@@ -43,7 +41,7 @@ export async function hasPermission(event: H3Event, perm: string): Promise<boole
 }
 
 /**
- * Require a permission � throws 403 Forbidden if not granted.
+ * Require a permission — throws 403 Forbidden if not granted.
  */
 export async function requirePermission(event: H3Event, perm: string): Promise<void> {
   const allowed = await hasPermission(event, perm)
@@ -64,7 +62,7 @@ export async function requireAnyPermission(event: H3Event, perms: string[]): Pro
   if (!user) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
-  if (user.role === SUPERADMIN_ROLE)
+  if (user.isSuperadmin)
     return
 
   if (!event.context.permissions) {

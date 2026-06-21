@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { userInvitation } from '#server/db/schema/user'
+import { user, userInvitation } from '#server/db/schema/user'
 
 export default defineEventHandler(async (event) => {
   await requirePermission(event, 'user:delete')
@@ -16,5 +16,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Cannot cancel accepted invite' })
 
   await db.delete(userInvitation).where(eq(userInvitation.id, id))
+  await db.delete(user).where(eq(user.id, existing.userId))
   return { success: true }
 })

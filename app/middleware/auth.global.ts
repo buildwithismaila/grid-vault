@@ -1,7 +1,7 @@
 export default defineNuxtRouteMiddleware(async (to) => {
   const publicPaths = ['/login', '/forgot-password', '/reset-password', '/accept-invite']
 
-  if (publicPaths.some(path => to.path.startsWith(path)))
+  if (publicPaths.some(path => to.path === path || to.path.startsWith(`${path}/`)))
     return
 
   const { loggedIn, fetch } = useUserSession()

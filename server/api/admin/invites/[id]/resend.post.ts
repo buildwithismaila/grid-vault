@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { userInvitation } from '#server/db/schema/user'
+import { user, userInvitation } from '#server/db/schema/user'
 import { AUTH } from '#shared/utils/constants'
 
 export default defineEventHandler(async (event) => {
@@ -16,7 +16,11 @@ export default defineEventHandler(async (event) => {
   if (existing.acceptedAt)
     throw createError({ statusCode: 400, statusMessage: 'Invite already accepted' })
 
+  const [invitedUser] = await db.select({ name: user.name }).from(user).where(eq(user.id, existing.userId)).limit(1)
+
   const { rawToken, tokenHash } = generateToken()
+
+  await sendInviteEmail(existing.email, invitedUser?.name || 'User', rawToken)
 
   await db.update(userInvitation).set({
     tokenHash,

@@ -1,4 +1,6 @@
+import { eq } from 'drizzle-orm'
 import { generateSecret, generateURI, verifySync } from 'otplib'
+import { mfaChallenge } from '#server/db/schema/auth'
 
 const APP_NAME = 'Grid Vault'
 
@@ -18,20 +20,32 @@ export function verifyMFAToken(token: string, secret: string): boolean {
   }
 }
 
-const mfaStore = new Map<string, { userId: string, expiresAt: Date }>()
-
-export function createMfaChallenge(userId: string): string {
-  const token = crypto.randomUUID()
-  mfaStore.set(token, { userId, expiresAt: new Date(Date.now() + 5 * 60 * 1000) })
-  return token
+export async function createMfaChallenge(userId: string): Promise<string> {
+  const db = useDb()
+  const { rawToken, tokenHash } = generateToken()
+  await db.insert(mfaChallenge).values({
+    userId,
+    tokenHash,
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+  })
+  return rawToken
 }
 
-export function consumeMfaChallenge(token: string): string | null {
-  const entry = mfaStore.get(token)
-  if (!entry)
+export async function consumeMfaChallenge(token: string): Promise<string | null> {
+  const db = useDb()
+  const tokenHash = hashToken(token)
+  const [challenge] = await db
+    .select()
+    .from(mfaChallenge)
+    .where(eq(mfaChallenge.tokenHash, tokenHash))
+    .limit(1)
+
+  if (!challenge || challenge.consumedAt || challenge.expiresAt < new Date())
     return null
-  mfaStore.delete(token)
-  if (entry.expiresAt < new Date())
-    return null
-  return entry.userId
+
+  await db.update(mfaChallenge)
+    .set({ consumedAt: new Date() })
+    .where(eq(mfaChallenge.id, challenge.id))
+
+  return challenge.userId
 }

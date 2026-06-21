@@ -3,7 +3,7 @@ const props = defineProps<{
   password: string
 }>()
 
-const MAX_SCORE = 8
+const MAX_SCORE = 7
 
 const strength = computed(() => {
   const pw = props.password

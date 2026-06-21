@@ -6,10 +6,10 @@ definePageMeta({ layout: 'auth' })
 
 const { fetch: refreshSession } = useUserSession()
 const router = useRouter()
+const { globalError, handleApiError, resetErrors } = useFormError()
 const loading = ref(false)
-const error = ref('')
 const mfaToken = ref('')
-const mfaCode = ref('')
+const mfaCode = ref<string[]>([])
 const mfaLoading = ref(false)
 const step = ref<'login' | 'mfa'>('login')
 
@@ -22,7 +22,7 @@ type Schema = z.output<typeof schema>
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   loading.value = true
-  error.value = ''
+  resetErrors()
 
   try {
     const res = await $fetch<{ mfaRequired?: boolean, mfaToken?: string }>('/api/auth/login', {
@@ -37,8 +37,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     await refreshSession()
     await router.push('/')
   }
-  catch (err: any) {
-    error.value = err.data?.statusMessage || 'Login failed'
+  catch (err) {
+    handleApiError(err, 'Login failed')
   }
   finally {
     loading.value = false
@@ -46,10 +46,10 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 }
 
 async function verifyMfa() {
-  error.value = ''
-  const code = mfaCode.value.trim()
+  resetErrors()
+  const code = mfaCode.value.join('')
   if (code.length !== 6 || !/^\d{6}$/.test(code)) {
-    error.value = 'Enter a valid 6-digit code'
+    globalError.value = 'Enter a valid 6-digit code'
     return
   }
   mfaLoading.value = true
@@ -61,8 +61,8 @@ async function verifyMfa() {
     await refreshSession()
     await router.push('/')
   }
-  catch (err: any) {
-    error.value = err.data?.data?.code?.[0] || err.data?.statusMessage || 'Verification failed'
+  catch (err) {
+    handleApiError(err, 'Verification failed')
   }
   finally {
     mfaLoading.value = false
@@ -93,15 +93,15 @@ async function verifyMfa() {
 
       <template #validation>
         <UAlert
-          v-if="error"
-          :title="error"
+          v-if="globalError"
+          :title="globalError"
           color="error"
           variant="soft"
           icon="i-lucide-alert-circle"
           :close-button="{
             'icon': 'i-lucide-x',
             'aria-label': 'Dismiss',
-            'onClick': () => { error = '' },
+            'onClick': resetErrors,
           }"
         />
       </template>
@@ -120,8 +120,8 @@ async function verifyMfa() {
       </template>
 
       <UAlert
-        v-if="error"
-        :title="error"
+        v-if="globalError"
+        :title="globalError"
         color="error"
         variant="soft"
         icon="i-lucide-alert-circle"
@@ -129,19 +129,22 @@ async function verifyMfa() {
         :close-button="{
           'icon': 'i-lucide-x',
           'aria-label': 'Dismiss',
-          'onClick': () => { error = '' },
+          'onClick': resetErrors,
         }"
       />
 
-      <UFormField name="mfaCode" label="Authentication code" required>
-        <UInput
+      <div class="flex justify-center py-4">
+        <UPinInput
           v-model="mfaCode"
-          placeholder="000000"
-          class="w-full text-center text-2xl tracking-widest"
-          maxlength="6"
-          @keydown.enter="verifyMfa"
+          length="6"
+          type="number"
+          otp
+          placeholder="○"
+          size="xl"
+          :ui="{ root: 'gap-3' }"
+          @complete="verifyMfa"
         />
-      </UFormField>
+      </div>
 
       <template #footer>
         <div class="flex flex-col gap-2">
@@ -151,7 +154,7 @@ async function verifyMfa() {
             color="neutral"
             variant="ghost"
             block
-            @click="step = 'login'; error = ''; mfaToken = ''; mfaCode = ''"
+            @click="step = 'login'; resetErrors(); mfaToken = ''; mfaCode = []"
           />
         </div>
       </template>

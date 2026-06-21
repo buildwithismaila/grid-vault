@@ -4,7 +4,7 @@ export function useAuthorization() {
   function can(permission: string): boolean {
     if (!user.value)
       return false
-    if (user.value.role === 'Superadmin')
+    if (user.value.isSuperadmin)
       return true
     return user.value?.permissions?.includes(permission) ?? false
   }
@@ -12,10 +12,10 @@ export function useAuthorization() {
   function canAny(...permissions: string[]): boolean {
     if (!user.value)
       return false
-    if (user.value.role === 'Superadmin')
+    if (user.value.isSuperadmin)
       return true
 
-    return permissions.length === 0 || permissions.some(p => user.value?.permissions?.includes(p) ?? false)
+    return permissions.length > 0 && permissions.some(p => user.value?.permissions?.includes(p) ?? false)
   }
 
   function hasRole(roleName: string): boolean {
@@ -25,7 +25,7 @@ export function useAuthorization() {
   }
 
   function isSuperadmin(): boolean {
-    return user.value?.role === 'Superadmin'
+    return user.value?.isSuperadmin ?? false
   }
 
   return { can, canAny, hasRole, isSuperadmin }

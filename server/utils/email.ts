@@ -23,7 +23,7 @@ function inviteHtml(name: string, url: string): string {
 <p style="margin:0 0 16px;font-size:14px;color:#555">Hi ${name},</p>
 <p style="margin:0 0 16px;font-size:14px;color:#555">You've been invited to join <strong>Grid Vault</strong>. Click the button below to set your password and activate your account.</p>
 <a href="${url}" style="display:inline-block;padding:12px 24px;background:#18181b;color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600">Activate account</a>
-<p style="margin:16px 0 0;font-size:12px;color:#888">This link expires in 48 hours. If you did not expect this invitation, you can ignore this email.</p>
+<p style="margin:16px 0 0;font-size:12px;color:#888">This link expires in 7 days. If you did not expect this invitation, you can ignore this email.</p>
 </td></tr>
 <tr><td style="padding:16px 32px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center">Grid Vault &mdash; Internal Admin Panel</td></tr>
 </table>

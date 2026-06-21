@@ -1,6 +1,5 @@
 import { inArray, sql } from 'drizzle-orm'
 import { role, rolePermission, userRole } from '#server/db/schema/rbac'
-import { user } from '#server/db/schema/user'
 
 export default defineEventHandler(async (event) => {
   await requirePermission(event, 'user:read')
@@ -14,7 +13,7 @@ export default defineEventHandler(async (event) => {
 
   const roleIds = roles.map(r => r.id)
 
-  const [rps, urs, userRoleCounts] = await Promise.all([
+  const [rps, urs] = await Promise.all([
     db
       .select()
       .from(rolePermission)
@@ -27,13 +26,6 @@ export default defineEventHandler(async (event) => {
       .from(userRole)
       .where(inArray(userRole.roleId, roleIds))
       .groupBy(userRole.roleId),
-    db
-      .select({
-        roleName: user.role,
-        count: sql<number>`count(*)::int`.as('count'),
-      })
-      .from(user)
-      .groupBy(user.role),
   ])
 
   const permMap: Record<string, string[]> = {}
@@ -46,14 +38,9 @@ export default defineEventHandler(async (event) => {
     userCountMap[ur.roleId] = ur.count
   }
 
-  const primaryCountMap: Record<string, number> = {}
-  for (const uc of userRoleCounts) {
-    primaryCountMap[uc.roleName] = uc.count
-  }
-
   return roles.map(r => ({
     ...r,
     permissionIds: permMap[r.id] || [],
-    userCount: (userCountMap[r.id] || 0) + (primaryCountMap[r.name] || 0),
+    userCount: userCountMap[r.id] || 0,
   }))
 })

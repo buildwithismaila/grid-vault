@@ -42,7 +42,7 @@ export const changePasswordSchema = z.object({
 
 export const sendInviteSchema = z.object({
   email: emailSchema,
-  role: z.enum(['Admin', 'HQ Asset Manager', 'Regional Technical Manager', 'Technical Manager', 'Service Centre Technician', 'Finance Officer', 'Stores Officer', 'Auditor', 'Viewer'], 'Invalid role'),
+  role: z.string('Role is required').min(1, 'Role is required'),
   name: z.string().min(1).max(255).trim().optional(),
   payrollId: z.string().min(1).max(6).trim().optional(),
   locationId: z.string().uuid().optional(),

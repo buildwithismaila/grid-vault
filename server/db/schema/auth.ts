@@ -5,7 +5,7 @@ import { user } from './user'
 
 export const auth = pgTable('auth', {
   id: uuid().defaultRandom().primaryKey(),
-  userId: uuid().references(() => user.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid().references(() => user.id, { onDelete: 'cascade' }).notNull().unique(),
   email: varchar({ length: 255 }).notNull().unique(),
   passwordHash: varchar({ length: 255 }).notNull(),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
@@ -14,6 +14,15 @@ export const auth = pgTable('auth', {
   mfaSecret: text('mfa_secret'),
   mfaEnabled: boolean('mfa_enabled').notNull().default(false),
   ...timestamps,
+})
+
+export const mfaChallenge = pgTable('mfa_challenge', {
+  id: uuid().defaultRandom().primaryKey(),
+  userId: uuid().notNull().references(() => user.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  consumedAt: timestamp('consumed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
 export const passwordResetToken = pgTable('password_reset_token', {

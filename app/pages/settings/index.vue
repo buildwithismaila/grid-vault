@@ -6,7 +6,7 @@ interface UserProfile {
   name: string | null
   payrollId: string | null
   avatarUrl: string | null
-  role: string
+  isSuperadmin: boolean
   status: string
   email: string
   locationId: string | null
@@ -89,8 +89,8 @@ function clearAvatarSelection() {
           </p>
           <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
             <UBadge
-              :label="profile?.role ?? ''"
-              :color="profile?.role === 'Superadmin' ? 'warning' : profile?.role === 'Admin' ? 'info' : 'neutral'"
+              :label="profile?.isSuperadmin ? 'Superadmin' : (user?.roles?.[0] ?? '')"
+              :color="profile?.isSuperadmin ? 'warning' : 'info'"
               variant="subtle"
             />
             <UBadge

@@ -2,20 +2,10 @@
 import type { RoleRow, UserRow } from '#shared/types/admin'
 import type { DropdownMenuItem, TableColumn } from '@nuxt/ui'
 import type { SortingState } from '@tanstack/vue-table'
-import { getPaginationRowModel } from '@tanstack/vue-table'
 import { formatEnum } from '#shared/utils'
 
 const { can } = useAuthorization()
 const { onError, toast } = useToastError()
-const table = useTemplateRef('table')
-
-const roleOptions = ['Admin', 'HQ Asset Manager', 'Regional Technical Manager', 'Technical Manager', 'Service Centre Technician', 'Finance Officer', 'Stores Officer', 'Auditor', 'Viewer']
-const editStatusOptions = ['ACTIVE', 'INACTIVE', 'PENDING'].map(v => ({ value: v, label: formatEnum(v) }))
-
-const search = ref('')
-const statusFilter = ref('all')
-const pagination = ref({ pageIndex: 0, pageSize: 15 })
-const sorting = ref<SortingState>([])
 
 const inviteOpen = ref(false)
 const editOpen = ref(false)
@@ -24,153 +14,67 @@ const deleteOpen = ref(false)
 
 const selectedUser = ref<UserRow | null>(null)
 const userToDelete = ref<UserRow | null>(null)
-const selectedRoleIds = ref<string[]>([])
 
-const inviteEmail = ref('')
-const inviteRole = ref('Viewer')
-const inviteName = ref('')
-const invitePayrollId = ref('')
-const inviteLocationId = ref('')
-const inviteJobRoleId = ref('')
-const inviting = ref(false)
+const { data: roles } = useLazyFetch('/api/rbac/roles', { server: false })
+const roleOptions = computed(() => ((roles.value ?? []) as any[]).map((r: any) => r.name))
 
-const editName = ref('')
-const editPayrollId = ref('')
-const editLocationId = ref('')
-const editJobRoleId = ref('')
-const editRole = ref('')
-const editStatus = ref('')
-const saving = ref(false)
-const deleting = ref(false)
+const searchInput = ref('')
+const search = ref('')
+const statusFilter = ref('all')
+const page = ref(1)
+const pageSize = ref(15)
+const sorting = ref<SortingState>([])
 
-const { data: users, status: fetchStatus, refresh } = useLazyFetch('/api/admin/users', { server: false })
-const { data: roles, status: rolesStatus } = useLazyFetch('/api/rbac/roles', { server: false })
+let debounceTimer: ReturnType<typeof setTimeout>
+watch(searchInput, (val) => {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    search.value = val
+    page.value = 1
+  }, 300)
+})
+
+const queryParams = computed(() => ({
+  search: search.value,
+  status: statusFilter.value,
+  page: page.value.toString(),
+  limit: pageSize.value.toString(),
+}))
+
+const { data: users, status: fetchStatus, refresh } = useLazyFetch('/api/admin/users', { query: queryParams, server: false } as any)
+
+watch([statusFilter, page, pageSize], () => { refresh() }) // eslint-disable-line style/max-statements-per-line
+
 const { data: orgUnits } = useLazyFetch('/api/org-units', { server: false })
 const { data: jobRoles } = useLazyFetch('/api/job-roles', { server: false })
 
 const loading = computed(() => fetchStatus.value === 'pending' || fetchStatus.value === 'idle')
-const rolesLoading = computed(() => rolesStatus.value === 'pending' || rolesStatus.value === 'idle')
-
-const filteredUsers = computed(() => {
-  let data = (users.value ?? []) as UserRow[]
-
-  if (statusFilter.value !== 'all') {
-    const statusMap: Record<string, UserRow['status']> = {
-      active: 'ACTIVE',
-      pending: 'PENDING',
-      disabled: 'INACTIVE',
-    }
-    data = data.filter(u => u.status === statusMap[statusFilter.value])
-  }
-
-  if (search.value) {
-    const q = search.value.toLowerCase()
-    data = data.filter(u =>
-      (u.name ?? '').toLowerCase().includes(q)
-      || (u.email ?? '').toLowerCase().includes(q),
-    )
-  }
-
-  return data
-})
-
-const totalCount = computed(() => (users.value ?? []).length)
-const activeCount = computed(() => (users.value ?? []).filter((u: UserRow) => u.status === 'ACTIVE').length)
-const pendingCount = computed(() => (users.value ?? []).filter((u: UserRow) => u.status === 'PENDING').length)
-const disabledCount = computed(() => (users.value ?? []).filter((u: UserRow) => u.status === 'INACTIVE').length)
 
 const statusOptions = computed(() => [
-  { label: 'All', value: 'all', count: totalCount.value },
-  { label: 'Active', value: 'active', count: activeCount.value },
-  { label: 'Pending', value: 'pending', count: pendingCount.value },
-  { label: 'Disabled', value: 'disabled', count: disabledCount.value },
+  { label: 'All', value: 'all', count: users.value?.total ?? 0 },
+  { label: 'Active', value: 'active', count: users.value?.activeCount ?? 0 },
+  { label: 'Pending', value: 'pending', count: users.value?.pendingCount ?? 0 },
+  { label: 'Disabled', value: 'disabled', count: users.value?.disabledCount ?? 0 },
 ])
+
+function onPageSizeChange(v: number) {
+  pageSize.value = v
+  page.value = 1
+}
 
 const columns: TableColumn<UserRow>[] = [
   { id: 'payrollId', accessorKey: 'payrollId', header: 'Payroll ID', enableSorting: true },
   { id: 'name', accessorKey: 'name', header: 'Name', enableSorting: true },
   { id: 'email', accessorKey: 'email', header: 'Email', enableSorting: true },
-  { id: 'role', accessorKey: 'role', header: 'Role', enableSorting: true },
+  { id: 'roles', header: 'Roles' },
   { id: 'status', accessorKey: 'status', header: 'Status', enableSorting: true },
   { id: 'locationName', accessorKey: 'locationName', header: 'Location' },
   { id: 'jobRoleName', accessorKey: 'jobRoleName', header: 'Job Role' },
-  { id: 'customRoles', accessorKey: 'customRoles', header: 'Custom Roles' },
   { id: 'invitedByName', accessorKey: 'invitedByName', header: 'Invited By' },
   { id: 'inviteExpiresAt', accessorKey: 'inviteExpiresAt', header: 'Invite Expires' },
   { id: 'createdAt', accessorKey: 'createdAt', header: 'Created', enableSorting: true },
   { id: 'actions' },
 ]
-
-async function sendInvite() {
-  inviting.value = true
-  try {
-    await $fetch('/api/auth/invite', {
-      method: 'POST',
-      body: {
-        email: inviteEmail.value,
-        role: inviteRole.value,
-        name: inviteName.value || undefined,
-        payrollId: invitePayrollId.value || undefined,
-        locationId: inviteLocationId.value || undefined,
-        jobRoleId: inviteJobRoleId.value || undefined,
-      },
-    })
-    toast.add({ title: 'Invitation sent', color: 'success', icon: 'i-lucide-check-circle' })
-    inviteOpen.value = false
-    inviteEmail.value = ''
-    inviteRole.value = 'Viewer'
-    inviteName.value = ''
-    invitePayrollId.value = ''
-    inviteLocationId.value = ''
-    inviteJobRoleId.value = ''
-    await refresh()
-  }
-  catch (err) {
-    onError(err, 'Failed to send invite')
-  }
-  finally {
-    inviting.value = false
-  }
-}
-
-function openEdit(user: UserRow) {
-  selectedUser.value = user
-  editName.value = user.name ?? ''
-  editPayrollId.value = user.payrollId ?? ''
-  editLocationId.value = user.locationId ?? ''
-  editJobRoleId.value = user.jobRoleId ?? ''
-  editRole.value = user.role
-  editStatus.value = user.status
-  editOpen.value = true
-}
-
-async function saveUser() {
-  if (!selectedUser.value)
-    return
-  saving.value = true
-  try {
-    await $fetch(`/api/admin/users/${selectedUser.value.id}` as const, {
-      method: 'PUT',
-      body: {
-        name: editName.value || undefined,
-        payrollId: editPayrollId.value || undefined,
-        locationId: editLocationId.value || null,
-        jobRoleId: editJobRoleId.value || null,
-        role: editRole.value,
-        status: editStatus.value,
-      },
-    })
-    toast.add({ title: 'User updated', color: 'success', icon: 'i-lucide-check-circle' })
-    editOpen.value = false
-    await refresh()
-  }
-  catch (err) {
-    onError(err, 'Failed to update user')
-  }
-  finally {
-    saving.value = false
-  }
-}
 
 async function toggleStatus(user: UserRow) {
   const newStatus: UserRow['status'] = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
@@ -184,38 +88,6 @@ async function toggleStatus(user: UserRow) {
   }
   catch (err) {
     onError(err, 'Failed to update status')
-  }
-}
-
-async function openRoleAssignment(user: UserRow) {
-  selectedUser.value = user
-  selectedRoleIds.value = []
-  try {
-    const userRoles = await $fetch<{ roleId: string }[]>(`/api/rbac/users/${user.id}/roles`)
-    selectedRoleIds.value = userRoles.map(r => r.roleId)
-  }
-  catch { /* no roles yet */ }
-  rolesOpen.value = true
-}
-
-async function saveUserRoles() {
-  if (!selectedUser.value)
-    return
-  saving.value = true
-  try {
-    await $fetch(`/api/rbac/users/${selectedUser.value.id}/roles` as const, {
-      method: 'PUT',
-      body: { roleIds: selectedRoleIds.value },
-    })
-    toast.add({ title: 'Roles updated', color: 'success', icon: 'i-lucide-check-circle' })
-    rolesOpen.value = false
-    await refresh()
-  }
-  catch (err) {
-    onError(err, 'Failed to update roles')
-  }
-  finally {
-    saving.value = false
   }
 }
 
@@ -234,15 +106,15 @@ async function resendInvite(user: UserRow) {
   }
 }
 
-async function copyInviteLink(user: UserRow) {
+async function generateInviteLink(user: UserRow) {
   try {
     const res = await $fetch<{ token?: string }>(`/api/admin/invites/${user.inviteId}/resend` as const, { method: 'POST' })
     if (res.token) {
       await navigator.clipboard.writeText(`${window.location.origin}/accept-invite/${res.token}`)
-      toast.add({ title: 'Invite link copied', color: 'success', icon: 'i-lucide-check-circle' })
+      toast.add({ title: 'New invite link generated and copied', color: 'success', icon: 'i-lucide-link' })
     }
     else {
-      toast.add({ title: 'Copy invite link only available in dev mode', color: 'warning', icon: 'i-lucide-alert-triangle' })
+      toast.add({ title: 'A new invitation has been sent by email', color: 'success', icon: 'i-lucide-mail' })
     }
     await refresh()
   }
@@ -262,10 +134,10 @@ async function cancelInvite(user: UserRow) {
   }
 }
 
-async function resetPassword(user: UserRow) {
+async function resetUserPassword(user: UserRow) {
   try {
     const res = await $fetch<{ token?: string }>(`/api/admin/users/${user.id}/reset-password` as const, { method: 'POST' })
-    toast.add({ title: 'Password reset link generated', color: 'success', icon: 'i-lucide-check-circle' })
+    toast.add({ title: 'Password reset email sent', color: 'success', icon: 'i-lucide-mail' })
     if (res.token && import.meta.dev) {
       await navigator.clipboard.writeText(`${window.location.origin}/reset-password/${res.token}`)
       toast.add({ title: 'Dev: reset link copied to clipboard', color: 'info', icon: 'i-lucide-link' })
@@ -277,13 +149,14 @@ async function resetPassword(user: UserRow) {
   }
 }
 
-function handleRoleCheckbox(roleId: string, checked: boolean | 'indeterminate') {
-  if (checked) {
-    selectedRoleIds.value = [...selectedRoleIds.value, roleId]
-  }
-  else {
-    selectedRoleIds.value = selectedRoleIds.value.filter(id => id !== roleId)
-  }
+function openEdit(user: UserRow) {
+  selectedUser.value = user
+  editOpen.value = true
+}
+
+function openRoleAssignment(user: UserRow) {
+  selectedUser.value = user
+  rolesOpen.value = true
 }
 
 function confirmDelete(user: UserRow) {
@@ -291,30 +164,11 @@ function confirmDelete(user: UserRow) {
   deleteOpen.value = true
 }
 
-async function deleteUser() {
-  if (!userToDelete.value)
-    return
-  deleting.value = true
-  try {
-    await $fetch(`/api/admin/users/${userToDelete.value.id}` as const, { method: 'DELETE' })
-    toast.add({ title: 'User deleted', color: 'success', icon: 'i-lucide-check-circle' })
-    deleteOpen.value = false
-    userToDelete.value = null
-    await refresh()
-  }
-  catch (err) {
-    onError(err, 'Failed to delete user')
-  }
-  finally {
-    deleting.value = false
-  }
-}
-
 function getActionItems(user: UserRow) {
   if (user.status === 'PENDING') {
     return [
       [{ label: 'Resend invitation', icon: 'i-lucide-mail', onSelect: () => resendInvite(user) }],
-      [{ label: 'Copy invite link', icon: 'i-lucide-link', onSelect: () => copyInviteLink(user) }],
+      [{ label: 'Generate invite link', icon: 'i-lucide-link', onSelect: () => generateInviteLink(user) }],
       [{ label: 'Cancel invitation', icon: 'i-lucide-x', color: 'error' as const, onSelect: () => cancelInvite(user) }],
     ] satisfies DropdownMenuItem[][]
   }
@@ -330,9 +184,9 @@ function getActionItems(user: UserRow) {
   }
   const items: DropdownMenuItem[][] = [
     [{ label: 'Edit user', icon: 'i-lucide-pencil', onSelect: () => openEdit(user) }],
-    [{ label: 'Assign roles', icon: 'i-lucide-user-round-cog', onSelect: () => openRoleAssignment(user) }],
+    [{ label: 'Manage roles', icon: 'i-lucide-user-round-cog', onSelect: () => openRoleAssignment(user) }],
     [{ label: 'Disable user', icon: 'i-lucide-pause', color: 'warning' as const, onSelect: () => toggleStatus(user) }],
-    [{ label: 'Reset password', icon: 'i-lucide-key-round', onSelect: () => resetPassword(user) }],
+    [{ label: 'Reset password', icon: 'i-lucide-key-round', onSelect: () => resetUserPassword(user) }],
   ]
   if (can('user:delete')) {
     items.push([{ label: 'Delete user', icon: 'i-lucide-trash', color: 'error' as const, onSelect: () => confirmDelete(user) }])
@@ -357,72 +211,16 @@ function getActionItems(user: UserRow) {
       />
     </div>
 
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 py-4">
-      <UCard variant="subtle" class="relative overflow-hidden">
-        <div class="flex items-center gap-3">
-          <div class="shrink-0 rounded-full bg-info/10 p-2.5">
-            <UIcon name="i-lucide-users" class="size-5 text-info" />
-          </div>
-          <div>
-            <p class="text-lg font-bold">
-              {{ totalCount }}
-            </p>
-            <p class="text-xs text-muted">
-              Total
-            </p>
-          </div>
-        </div>
-      </UCard>
-      <UCard variant="subtle" class="relative overflow-hidden">
-        <div class="flex items-center gap-3">
-          <div class="shrink-0 rounded-full bg-success/10 p-2.5">
-            <UIcon name="i-lucide-check-circle" class="size-5 text-success" />
-          </div>
-          <div>
-            <p class="text-lg font-bold">
-              {{ activeCount }}
-            </p>
-            <p class="text-xs text-muted">
-              Active
-            </p>
-          </div>
-        </div>
-      </UCard>
-      <UCard variant="subtle" class="relative overflow-hidden">
-        <div class="flex items-center gap-3">
-          <div class="shrink-0 rounded-full bg-warning/10 p-2.5">
-            <UIcon name="i-lucide-clock" class="size-5 text-warning" />
-          </div>
-          <div>
-            <p class="text-lg font-bold">
-              {{ pendingCount }}
-            </p>
-            <p class="text-xs text-muted">
-              Pending
-            </p>
-          </div>
-        </div>
-      </UCard>
-      <UCard variant="subtle" class="relative overflow-hidden">
-        <div class="flex items-center gap-3">
-          <div class="shrink-0 rounded-full bg-error/10 p-2.5">
-            <UIcon name="i-lucide-pause-circle" class="size-5 text-error" />
-          </div>
-          <div>
-            <p class="text-lg font-bold">
-              {{ disabledCount }}
-            </p>
-            <p class="text-xs text-muted">
-              Disabled
-            </p>
-          </div>
-        </div>
-      </UCard>
-    </div>
+    <UserStatCards
+      :total="users?.total ?? 0"
+      :active="users?.activeCount ?? 0"
+      :pending="users?.pendingCount ?? 0"
+      :disabled="users?.disabledCount ?? 0"
+    />
 
-    <div class="flex items-center  px-4 py-3.5 border-b border-accented justify-between gap-4 p-4 w-full overflow-x-auto">
+    <div class="flex items-center px-4 py-3.5 border-b border-accented justify-between gap-4 w-full overflow-x-auto">
       <div class="flex items-center gap-2 flex-1">
-        <UInput v-model="search" icon="i-lucide-search" placeholder="Search name or email..." class="w-64" />
+        <UInput v-model="searchInput" icon="i-lucide-search" placeholder="Search name or email..." class="w-64" />
       </div>
       <div class="flex items-center gap-2">
         <div class="flex gap-1">
@@ -443,14 +241,12 @@ function getActionItems(user: UserRow) {
         </div>
       </div>
     </div>
+
     <UTable
-      ref="table"
-      v-model:pagination="pagination"
       v-model:sorting="sorting"
-      :data="filteredUsers"
+      :data="(users?.data ?? []) as UserRow[]"
       :columns="columns"
       :loading="loading"
-      :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }"
     >
       <template #payrollId-cell="{ row }">
         <span v-if="row.original.payrollId" class="font-mono text-sm">{{ row.original.payrollId }}</span>
@@ -460,14 +256,6 @@ function getActionItems(user: UserRow) {
       <template #name-cell="{ row }">
         <span v-if="row.original.name" class="font-medium">{{ row.original.name }}</span>
         <span v-else class="text-muted">—</span>
-      </template>
-
-      <template #role-cell="{ row }">
-        <UBadge
-          :label="row.original.role"
-          :color="row.original.role === 'Superadmin' ? 'warning' : row.original.role === 'Admin' ? 'info' : 'neutral'"
-          variant="subtle"
-        />
       </template>
 
       <template #status-cell="{ row }">
@@ -486,19 +274,16 @@ function getActionItems(user: UserRow) {
         <span class="text-muted text-sm">{{ row.original.jobRoleName || '—' }}</span>
       </template>
 
-      <template #customRoles-cell="{ row }">
+      <template #roles-cell="{ row }">
         <div class="flex flex-wrap gap-1">
-          <template v-if="row.original.customRoles.length">
+          <template v-for="role in row.original.roles" :key="role">
             <UBadge
-              v-for="role in row.original.customRoles"
-              :key="role"
               :label="role"
-              color="neutral"
-              variant="subtle"
+              :color="role === 'Superadmin' ? 'warning' : 'primary'"
+              :variant="role === 'Superadmin' ? 'solid' : 'subtle'"
               size="sm"
             />
           </template>
-          <span v-else class="text-xs text-muted">—</span>
         </div>
       </template>
 
@@ -519,10 +304,10 @@ function getActionItems(user: UserRow) {
 
       <template #actions-cell="{ row }">
         <UDropdownMenu
-          v-if="row.original.role !== 'Superadmin'"
+          v-if="!row.original.isSuperadmin"
           :items="getActionItems(row.original)"
         >
-          <UButton icon="i-lucide-ellipsis" color="neutral" variant="ghost" size="sm" square />
+          <UButton icon="i-lucide-ellipsis" color="neutral" variant="ghost" size="sm" square aria-label="User actions" />
         </UDropdownMenu>
       </template>
 
@@ -541,176 +326,52 @@ function getActionItems(user: UserRow) {
 
     <div class="flex items-center justify-between px-4 py-3">
       <p class="text-sm text-muted">
-        {{ filteredUsers.length }} of {{ users?.length || 0 }} user{{ users?.length !== 1 ? 's' : '' }}
+        {{ users?.data?.length || 0 }} of {{ users?.total || 0 }} user{{ users?.total !== 1 ? 's' : '' }}
       </p>
       <div class="flex items-center gap-2">
         <USelect
-          :model-value="pagination.pageSize"
+          :model-value="pageSize"
           :items="[10, 15, 25, 50]"
           class="w-20"
-          @update:model-value="(v: number) => { pagination.pageSize = v; pagination.pageIndex = 0 }"
+          @update:model-value="onPageSizeChange"
         />
         <UPagination
-          :page="(table?.tableApi?.getState().pagination.pageIndex || 0) + 1"
-          :items-per-page="table?.tableApi?.getState().pagination.pageSize"
-          :total="table?.tableApi?.getFilteredRowModel().rows.length"
-          @update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
+          :page="page"
+          :items-per-page="pageSize"
+          :total="users?.total ?? 0"
+          @update:page="(p: number) => page = p"
         />
       </div>
     </div>
   </div>
 
-  <UModal v-model:open="inviteOpen" title="Invite user" description="Set up a new user and send an invitation email">
-    <template #body>
-      <div class="max-w-sm mx-auto space-y-5 py-1">
-        <UFormField name="email" label="Email" required hint="Required">
-          <UInput v-model="inviteEmail" type="email" placeholder="user@example.com" class="w-full" />
-        </UFormField>
-        <UFormField name="invite-name" label="Name">
-          <UInput v-model="inviteName" placeholder="Full name" class="w-full" />
-        </UFormField>
-        <UFormField name="payroll-id" label="Payroll ID" hint="Max 6 characters">
-          <UInput v-model="invitePayrollId" placeholder="e.g. 000001" maxlength="6" class="w-full" />
-        </UFormField>
-        <div class="grid grid-cols-2 gap-4">
-          <UFormField name="location" label="Location">
-            <USelect
-              v-model="inviteLocationId"
-              :items="orgUnits ?? []"
-              value-key="id"
-              label-key="name"
-              :loading="!orgUnits"
-              placeholder="Select location"
-              class="w-full"
-            />
-          </UFormField>
-          <UFormField name="job-role" label="Job Role">
-            <USelect
-              v-model="inviteJobRoleId"
-              :items="jobRoles ?? []"
-              value-key="id"
-              label-key="name"
-              :loading="!jobRoles"
-              placeholder="Select job role"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
-        <UFormField name="role" label="Initial role" required hint="Required">
-          <USelect v-model="inviteRole" :items="roleOptions" class="w-full" />
-        </UFormField>
-      </div>
-    </template>
-    <template #footer>
-      <div class="flex justify-end gap-3">
-        <UButton label="Cancel" color="neutral" variant="outline" @click="inviteOpen = false" />
-        <UButton label="Send invite" :loading="inviting" :disabled="!inviteEmail" @click="sendInvite" />
-      </div>
-    </template>
-  </UModal>
+  <UserInviteModal
+    v-model:open="inviteOpen"
+    :role-options="roleOptions"
+    :org-units="orgUnits"
+    :job-roles="jobRoles"
+    @saved="refresh()"
+  />
 
-  <UModal v-model:open="editOpen" :title="`Edit user — ${selectedUser?.name || selectedUser?.email || ''}`" description="Update user details">
-    <template #body>
-      <div class="max-w-sm mx-auto space-y-5 py-1">
-        <UFormField name="edit-name" label="Name">
-          <UInput v-model="editName" class="w-full" />
-        </UFormField>
-        <UFormField name="edit-payroll-id" label="Payroll ID">
-          <UInput v-model="editPayrollId" maxlength="6" class="w-full" />
-        </UFormField>
-        <div class="grid grid-cols-2 gap-4">
-          <UFormField name="edit-location" label="Location">
-            <USelect
-              v-model="editLocationId"
-              :items="orgUnits ?? []"
-              value-key="id"
-              label-key="name"
-              :loading="!orgUnits"
-              placeholder="Select location"
-              class="w-full"
-            />
-          </UFormField>
-          <UFormField name="edit-job-role" label="Job Role">
-            <USelect
-              v-model="editJobRoleId"
-              :items="jobRoles ?? []"
-              value-key="id"
-              label-key="name"
-              :loading="!jobRoles"
-              placeholder="Select job role"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
-        <UFormField name="edit-role" label="Role">
-          <USelect v-model="editRole" :items="roleOptions" class="w-full" />
-        </UFormField>
-        <UFormField name="edit-status" label="Status">
-          <USelect v-model="editStatus" :items="editStatusOptions" class="w-full" />
-        </UFormField>
-      </div>
-    </template>
-    <template #footer="{ close }">
-      <div class="flex justify-end gap-3">
-        <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
-        <UButton label="Save" :loading="saving" @click="saveUser" />
-      </div>
-    </template>
-  </UModal>
+  <UserEditModal
+    v-model:open="editOpen"
+    :user="selectedUser"
+    :org-units="orgUnits"
+    :job-roles="jobRoles"
+    @saved="refresh()"
+  />
 
-  <UModal v-model:open="rolesOpen" :title="`Assign custom roles — ${selectedUser?.name || selectedUser?.email || ''}`" description="Select custom roles for this user">
-    <template #body>
-      <div v-if="rolesLoading" class="flex items-center justify-center gap-2 py-8">
-        <UIcon name="i-lucide-loader" class="size-4 animate-spin" />
-        <span class="text-sm text-muted">Loading roles...</span>
-      </div>
-      <div v-else-if="!roles?.length" class="py-8 text-center text-sm text-muted">
-        No custom roles defined yet. Create roles in the Roles page first.
-      </div>
-      <div v-else class="space-y-3">
-        <div v-for="r in (roles as RoleRow[])" :key="r.id" class="flex items-center gap-3">
-          <UCheckbox
-            :id="r.id"
-            :model-value="selectedRoleIds.includes(r.id)"
-            @update:model-value="(v: boolean | 'indeterminate') => handleRoleCheckbox(r.id, v)"
-          >
-            <template #label>
-              <span class="font-medium">{{ r.name }}</span>
-              <span v-if="r.description" class="block text-xs text-muted">{{ r.description }}</span>
-            </template>
-          </UCheckbox>
-        </div>
-      </div>
-    </template>
-    <template #footer="{ close }">
-      <div class="flex justify-end gap-3">
-        <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
-        <UButton label="Save" :loading="saving" @click="saveUserRoles" />
-      </div>
-    </template>
-  </UModal>
+  <UserRoleModal
+    v-model:open="rolesOpen"
+    :user="selectedUser"
+    :roles="(roles ?? []) as RoleRow[]"
+    :loading="!roles"
+    @saved="refresh()"
+  />
 
-  <UModal v-model:open="deleteOpen" title="Delete user" description="This action cannot be undone">
-    <template #body>
-      <div class="max-w-sm mx-auto space-y-5 py-1">
-        <div class="flex items-start gap-3">
-          <UIcon name="i-lucide-alert-triangle" class="size-5 text-error shrink-0 mt-0.5" />
-          <div>
-            <p class="text-sm">
-              Are you sure you want to delete <strong>{{ userToDelete?.name || userToDelete?.email }}</strong>?
-            </p>
-            <p class="text-xs text-muted mt-2">
-              This will permanently remove the user, their authentication records, custom role assignments, and invitations. This action cannot be undone.
-            </p>
-          </div>
-        </div>
-      </div>
-    </template>
-    <template #footer="{ close }">
-      <div class="flex justify-end gap-3">
-        <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
-        <UButton label="Delete" color="error" :loading="deleting" @click="deleteUser" />
-      </div>
-    </template>
-  </UModal>
+  <UserDeleteModal
+    v-model:open="deleteOpen"
+    :user="userToDelete"
+    @saved="refresh(); userToDelete = null"
+  />
 </template>
