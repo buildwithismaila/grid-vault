@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   const [existing] = await db.select().from(user).where(eq(user.id, id)).limit(1)
   if (!existing)
     throw createError({ statusCode: 404, statusMessage: 'User not found' })
-  if (existing.role === 'Superadmin')
+  if (existing.isSuperadmin)
     throw createError({ statusCode: 403, statusMessage: 'Cannot delete Superadmin' })
 
   await db.delete(user).where(eq(user.id, id))

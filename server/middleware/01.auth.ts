@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   event.context.user = session?.user ?? null
 
   // Preload permissions for non-superadmin users
-  if (session?.user && session.user.role !== 'Superadmin') {
+  if (session?.user && !session.user.isSuperadmin) {
     const perms = await getUserPermissions(session.user.id)
     event.context.permissions = perms
   }

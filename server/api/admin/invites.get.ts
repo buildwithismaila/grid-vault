@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
       id: userInvitation.id,
       email: userInvitation.email,
       userId: userInvitation.userId,
-      userRole: user.role,
+      isSuperadmin: user.isSuperadmin,
       invitedByName: inviterAlias.name,
       createdAt: userInvitation.createdAt,
       expiresAt: userInvitation.expiresAt,

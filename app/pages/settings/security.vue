@@ -74,10 +74,10 @@ const mfaSetupPassword = ref('')
 const mfaSetupSecret = ref('')
 const mfaSetupOtpauth = ref('')
 const mfaSetupQrDataUrl = ref('')
-const mfaVerifyCode = ref('')
+const mfaVerifyCode = ref<string[]>([])
 const mfaVerifyLoading = ref(false)
 const mfaDisablePassword = ref('')
-const mfaDisableCode = ref('')
+const mfaDisableCode = ref<string[]>([])
 const mfaDisableLoading = ref(false)
 
 async function startMfaSetup() {
@@ -103,7 +103,7 @@ async function startMfaSetup() {
 
 async function verifyMfa() {
   mfaSetupForm.resetErrors()
-  const code = mfaVerifyCode.value.trim()
+  const code = mfaVerifyCode.value.join('')
   if (code.length !== 6 || !/^\d{6}$/.test(code)) {
     mfaSetupForm.globalError.value = 'Enter a valid 6-digit code'
     return
@@ -119,7 +119,7 @@ async function verifyMfa() {
     mfaSetupSecret.value = ''
     mfaSetupOtpauth.value = ''
     mfaSetupQrDataUrl.value = ''
-    mfaVerifyCode.value = ''
+    mfaVerifyCode.value = []
     toast.add({ title: 'MFA enabled', color: 'success' })
     refreshMfa()
   }
@@ -137,7 +137,7 @@ function cancelMfaSetup() {
   mfaSetupSecret.value = ''
   mfaSetupOtpauth.value = ''
   mfaSetupQrDataUrl.value = ''
-  mfaVerifyCode.value = ''
+  mfaVerifyCode.value = []
   mfaSetupForm.resetErrors()
 }
 
@@ -147,12 +147,12 @@ async function disableMfa() {
   try {
     await $fetch('/api/auth/mfa/disable', {
       method: 'POST',
-      body: { password: mfaDisablePassword.value, code: mfaDisableCode.value },
+      body: { password: mfaDisablePassword.value, code: mfaDisableCode.value.join('') },
     })
     toast.add({ title: 'MFA disabled', color: 'success' })
     mfaDisableOpen.value = false
     mfaDisablePassword.value = ''
-    mfaDisableCode.value = ''
+    mfaDisableCode.value = []
     await refreshMfa()
   }
   catch (err) {
@@ -314,13 +314,18 @@ async function disableMfa() {
           <UAlert v-if="mfaSetupForm.globalError" color="error" variant="soft" :title="mfaSetupForm.globalError" icon="i-lucide-alert-circle" />
 
           <UFormField name="code" label="Verification code" required>
-            <UInput
-              v-model="mfaVerifyCode"
-              placeholder="000000"
-              maxlength="6"
-              class="w-full text-center text-xl tracking-widest"
-              @keydown.enter="verifyMfa"
-            />
+            <div class="flex justify-center py-2">
+              <UPinInput
+                v-model="mfaVerifyCode"
+                length="6"
+                type="number"
+                otp
+                placeholder="○"
+                size="xl"
+                :ui="{ root: 'gap-3' }"
+                @complete="verifyMfa"
+              />
+            </div>
           </UFormField>
         </div>
       </template>
@@ -349,19 +354,25 @@ async function disableMfa() {
             <UInput v-model="mfaDisablePassword" type="password" placeholder="Enter your password" class="w-full" />
           </UFormField>
           <UFormField name="code" label="Authentication code" required>
-            <UInput
-              v-model="mfaDisableCode"
-              placeholder="000000"
-              maxlength="6"
-              class="w-full text-center text-xl tracking-widest"
-            />
+            <div class="flex justify-center py-2">
+              <UPinInput
+                v-model="mfaDisableCode"
+                length="6"
+                type="number"
+                otp
+                placeholder="○"
+                size="xl"
+                :ui="{ root: 'gap-3' }"
+                @complete="disableMfa"
+              />
+            </div>
           </UFormField>
         </div>
       </template>
 
       <template #footer>
         <div class="flex justify-end gap-2">
-          <UButton color="neutral" variant="soft" label="Cancel" @click="mfaDisableOpen = false; mfaDisablePassword = ''; mfaDisableCode = ''; mfaDisableForm.resetErrors()" />
+          <UButton color="neutral" variant="soft" label="Cancel" @click="mfaDisableOpen = false; mfaDisablePassword = ''; mfaDisableCode = []; mfaDisableForm.resetErrors()" />
           <UButton color="error" label="Disable MFA" :loading="mfaDisableLoading" @click="disableMfa" />
         </div>
       </template>

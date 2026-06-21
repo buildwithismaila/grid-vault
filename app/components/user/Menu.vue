@@ -11,7 +11,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
   [{
     label: user.value?.name || 'User',
     email: user.value?.email,
-    description: user.value?.role,
+    description: user.value?.isSuperadmin ? 'Superadmin' : user.value?.roles?.join(', ') || '',
     icon: 'i-lucide-user',
     disabled: true,
     slot: 'user',

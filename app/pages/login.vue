@@ -9,7 +9,7 @@ const router = useRouter()
 const { globalError, handleApiError, resetErrors } = useFormError()
 const loading = ref(false)
 const mfaToken = ref('')
-const mfaCode = ref('')
+const mfaCode = ref<string[]>([])
 const mfaLoading = ref(false)
 const step = ref<'login' | 'mfa'>('login')
 
@@ -47,7 +47,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
 async function verifyMfa() {
   resetErrors()
-  const code = mfaCode.value.trim()
+  const code = mfaCode.value.join('')
   if (code.length !== 6 || !/^\d{6}$/.test(code)) {
     globalError.value = 'Enter a valid 6-digit code'
     return
@@ -133,15 +133,18 @@ async function verifyMfa() {
         }"
       />
 
-      <UFormField name="mfaCode" label="Authentication code" required>
-        <UInput
+      <div class="flex justify-center py-4">
+        <UPinInput
           v-model="mfaCode"
-          placeholder="000000"
-          class="w-full text-center text-2xl tracking-widest"
-          maxlength="6"
-          @keydown.enter="verifyMfa"
+          length="6"
+          type="number"
+          otp
+          placeholder="○"
+          size="xl"
+          :ui="{ root: 'gap-3' }"
+          @complete="verifyMfa"
         />
-      </UFormField>
+      </div>
 
       <template #footer>
         <div class="flex flex-col gap-2">
@@ -151,7 +154,7 @@ async function verifyMfa() {
             color="neutral"
             variant="ghost"
             block
-            @click="step = 'login'; resetErrors(); mfaToken = ''; mfaCode = ''"
+            @click="step = 'login'; resetErrors(); mfaToken = ''; mfaCode = []"
           />
         </div>
       </template>

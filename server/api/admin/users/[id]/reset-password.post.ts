@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
   const [existingUser] = await db.select().from(user).where(eq(user.id, id)).limit(1)
   if (!existingUser)
     throw createError({ statusCode: 404, statusMessage: 'User not found' })
-  if (existingUser.role === 'Superadmin')
+  if (existingUser.isSuperadmin)
     throw createError({ statusCode: 403, statusMessage: 'Cannot reset Superadmin password' })
 
   const [existingAuth] = await db.select().from(auth).where(eq(auth.userId, id)).limit(1)

@@ -60,7 +60,7 @@ export default defineEventHandler(async (event) => {
       name: user.name,
       payrollId: user.payrollId,
       email: sql<string>`COALESCE(${userInvitation.email}, ${auth.email})`,
-      role: user.role,
+      isSuperadmin: user.isSuperadmin,
       status: user.status,
       locationId: user.locationId,
       locationName: orgUnit.name,
@@ -115,7 +115,7 @@ export default defineEventHandler(async (event) => {
   return {
     data: rows.map(u => ({
       ...u,
-      customRoles: (userRolesMap[u.id] || []).filter(name => name !== u.role),
+      roles: userRolesMap[u.id] || [],
     })),
     total,
     activeCount: counts?.activeCount ?? 0,

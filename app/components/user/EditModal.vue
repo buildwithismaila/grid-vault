@@ -6,7 +6,6 @@ import * as z from 'zod'
 const props = defineProps<{
   open: boolean
   user: UserRow | null
-  roleOptions: string[]
   orgUnits?: { id: string, name: string }[]
   jobRoles?: { id: string, name: string }[]
 }>()
@@ -26,7 +25,6 @@ const schema = z.object({
   email: z.string().email('Invalid email').toLowerCase().trim().optional(),
   locationId: z.string().optional(),
   jobRoleId: z.string().optional(),
-  role: z.string().min(1, 'Role is required'),
   status: z.enum(['ACTIVE', 'INACTIVE', 'PENDING']),
 })
 type Schema = z.output<typeof schema>
@@ -42,7 +40,6 @@ watch(() => props.open, (open) => {
     state.email = props.user.email
     state.locationId = props.user.locationId ?? ''
     state.jobRoleId = props.user.jobRoleId ?? ''
-    state.role = props.user.role
     state.status = props.user.status as 'ACTIVE' | 'INACTIVE' | 'PENDING'
   }
 })
@@ -57,7 +54,6 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       payrollId: event.data.payrollId || undefined,
       locationId: event.data.locationId || null,
       jobRoleId: event.data.jobRoleId || null,
-      role: event.data.role,
       status: event.data.status,
     }
     if (event.data.email !== props.user.email)
@@ -125,9 +121,6 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
               />
             </UFormField>
           </div>
-          <UFormField name="role" label="Role" required>
-            <USelect v-model="state.role" :items="roleOptions" class="w-full" />
-          </UFormField>
           <UFormField name="status" label="Status" required>
             <USelect v-model="state.status" :items="editStatusOptions" class="w-full" />
           </UFormField>

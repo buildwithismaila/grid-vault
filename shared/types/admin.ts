@@ -3,7 +3,7 @@ export interface UserRow {
   payrollId: string | null
   name: string | null
   email: string
-  role: string
+  isSuperadmin: boolean
   status: 'ACTIVE' | 'INACTIVE' | 'PENDING'
   locationId: string | null
   locationName: string | null
@@ -13,7 +13,7 @@ export interface UserRow {
   inviteExpiresAt: string | null
   inviteId: string | null
   createdAt: string
-  customRoles: string[]
+  roles: string[]
 }
 
 export interface OrgUnitRow {

@@ -276,9 +276,13 @@ function getActionItems(user: UserRow) {
 
       <template #roles-cell="{ row }">
         <div class="flex flex-wrap gap-1">
-          <UBadge :label="row.original.role" color="primary" variant="solid" size="sm" />
-          <template v-for="role in row.original.customRoles" :key="role">
-            <UBadge :label="role" color="neutral" variant="subtle" size="sm" />
+          <template v-for="role in row.original.roles" :key="role">
+            <UBadge
+              :label="role"
+              :color="role === 'Superadmin' ? 'warning' : 'primary'"
+              :variant="role === 'Superadmin' ? 'solid' : 'subtle'"
+              size="sm"
+            />
           </template>
         </div>
       </template>
@@ -300,7 +304,7 @@ function getActionItems(user: UserRow) {
 
       <template #actions-cell="{ row }">
         <UDropdownMenu
-          v-if="row.original.role !== 'Superadmin'"
+          v-if="!row.original.isSuperadmin"
           :items="getActionItems(row.original)"
         >
           <UButton icon="i-lucide-ellipsis" color="neutral" variant="ghost" size="sm" square aria-label="User actions" />
@@ -352,7 +356,6 @@ function getActionItems(user: UserRow) {
   <UserEditModal
     v-model:open="editOpen"
     :user="selectedUser"
-    :role-options="roleOptions"
     :org-units="orgUnits"
     :job-roles="jobRoles"
     @saved="refresh()"

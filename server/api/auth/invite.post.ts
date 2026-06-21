@@ -34,7 +34,6 @@ export default defineEventHandler(async (event) => {
     payrollId,
     locationId,
     jobRoleId,
-    role,
     status: 'PENDING',
   }).returning({ id: user.id })
 

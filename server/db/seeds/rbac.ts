@@ -1,12 +1,14 @@
 import { eq, inArray } from 'drizzle-orm'
 import { ACTIONS, RESOURCES } from '~~/shared/utils/permissions'
-import { permission, role, rolePermission } from '../../db/schema/rbac'
+import { permission, role, rolePermission, userRole } from '../../db/schema/rbac'
+import { user } from '../../db/schema/user'
 
 export async function seedRbac() {
   const db = useDb()
   await seedPermissions(db)
   await seedRoles(db)
   await seedRolePermissions(db)
+  await assignSuperadminRole(db)
 }
 
 const permDescriptions: Record<string, string> = {
@@ -54,6 +56,32 @@ async function seedPermissions(db: ReturnType<typeof useDb>) {
 }
 
 const seedRoleDefs: Record<string, string[]> = {
+  'Superadmin': [
+    'user:create',
+    'user:read',
+    'user:update',
+    'user:delete',
+    'org_unit:create',
+    'org_unit:read',
+    'org_unit:update',
+    'org_unit:delete',
+    'job_role:create',
+    'job_role:read',
+    'job_role:update',
+    'job_role:delete',
+    'inventory:create',
+    'inventory:read',
+    'inventory:update',
+    'inventory:delete',
+    'asset:create',
+    'asset:read',
+    'asset:update',
+    'asset:delete',
+    'report:create',
+    'report:read',
+    'report:update',
+    'report:delete',
+  ],
   'Admin': [
     'user:create',
     'user:read',
@@ -182,5 +210,16 @@ async function seedRolePermissions(db: ReturnType<typeof useDb>) {
         permissionId: p.id,
       }).onConflictDoNothing({ target: [rolePermission.roleId, rolePermission.permissionId] })
     }
+  }
+}
+
+async function assignSuperadminRole(db: ReturnType<typeof useDb>) {
+  const [superadminRole] = await db.select({ id: role.id }).from(role).where(eq(role.name, 'Superadmin')).limit(1)
+  if (!superadminRole)
+    return
+
+  const superadmins = await db.select({ id: user.id }).from(user).where(eq(user.isSuperadmin, true))
+  for (const u of superadmins) {
+    await db.insert(userRole).values({ userId: u.id, roleId: superadminRole.id }).onConflictDoNothing()
   }
 }
