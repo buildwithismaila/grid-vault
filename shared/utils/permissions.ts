@@ -43,3 +43,34 @@ export function allPermissions(): string[] {
     ACTIONS.map(action => permissionName(resource, action)),
   )
 }
+
+export const RESOURCE_LABELS: Record<string, string> = {
+  user: 'Users',
+  org_unit: 'Organisation Units',
+  job_role: 'Job Roles',
+  inventory: 'Inventory',
+  asset: 'Assets',
+  report: 'Reports',
+}
+
+export const RESOURCE_GROUPS = [
+  {
+    key: 'system',
+    label: 'System Resources',
+    icon: 'i-lucide-shield',
+    resources: ['user', 'org_unit', 'job_role'] as const,
+  },
+  {
+    key: 'domain',
+    label: 'Domain Resources',
+    icon: 'i-lucide-blocks',
+    resources: ['inventory', 'asset', 'report'] as const,
+  },
+] as const
+
+export const ACTION_LABELS: Record<string, string> = {
+  create: 'Create',
+  read: 'Read',
+  update: 'Update',
+  delete: 'Delete',
+}

@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { auth } from '#server/db/schema/auth'
 import { role, userRole } from '#server/db/schema/rbac'
 import { user, userInvitation } from '#server/db/schema/user'
-import { validateBody } from '#server/utils/validate'
+import { getRouterParamOrThrow, validateBody } from '#server/utils/validate'
 
 const updateUserSchema = z.object({
   name: z.string().min(1).max(255).trim().optional(),
@@ -17,9 +17,7 @@ const updateUserSchema = z.object({
 
 export default defineEventHandler(async (event) => {
   await requirePermission(event, 'user:update')
-  const id = getRouterParam(event, 'id')
-  if (!id)
-    throw createError({ statusCode: 400, statusMessage: 'Missing user id' })
+  const id = getRouterParamOrThrow(event, 'id')
 
   const body = await validateBody(event, updateUserSchema)
   const db = useDb()
@@ -28,9 +26,9 @@ export default defineEventHandler(async (event) => {
   if (!existing)
     throw createError({ statusCode: 404, statusMessage: 'User not found' })
   if (existing.role === 'Superadmin')
-    throw createError({ statusCode: 400, statusMessage: 'Cannot modify Superadmin' })
+    throw createError({ statusCode: 403, statusMessage: 'Cannot modify Superadmin' })
   if (body.role === 'Superadmin')
-    throw createError({ statusCode: 400, statusMessage: 'Cannot assign Superadmin role' })
+    throw createError({ statusCode: 403, statusMessage: 'Cannot assign Superadmin role' })
 
   if (Object.keys(body).length === 0)
     throw createError({ statusCode: 400, statusMessage: 'No fields to update' })

@@ -6,6 +6,7 @@ definePageMeta({ layout: 'auth' })
 
 const loading = ref(false)
 const submitted = ref(false)
+const networkError = ref('')
 
 const schema = z.object({
   email: z.email('Invalid email').toLowerCase().trim(),
@@ -24,8 +25,13 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     })
     submitted.value = true
   }
-  catch {
-    submitted.value = true
+  catch (err: any) {
+    if (!err.response) {
+      networkError.value = 'Could not reach the server. Please check your connection and try again.'
+    }
+    else {
+      submitted.value = true
+    }
   }
   finally {
     loading.value = false
@@ -46,7 +52,12 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       </div>
     </template>
 
-    <template v-if="submitted">
+    <template v-if="networkError">
+      <UAlert color="error" variant="subtle" :title="networkError" icon="i-lucide-alert-circle" />
+      <UButton label="Try again" color="neutral" variant="outline" block class="mt-4" @click="networkError = ''" />
+    </template>
+
+    <template v-else-if="submitted">
       <div class="space-y-3">
         <p class="text-sm text-muted">
           If an account with that email exists, a password reset link has been sent.

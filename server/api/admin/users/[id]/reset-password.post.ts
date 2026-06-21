@@ -1,13 +1,12 @@
 import { eq } from 'drizzle-orm'
 import { auth, passwordResetToken } from '#server/db/schema/auth'
 import { user } from '#server/db/schema/user'
+import { getRouterParamOrThrow } from '#server/utils/validate'
 import { AUTH } from '#shared/utils/constants'
 
 export default defineEventHandler(async (event) => {
   await requirePermission(event, 'user:update')
-  const id = getRouterParam(event, 'id')
-  if (!id)
-    throw createError({ statusCode: 400, statusMessage: 'Missing user id' })
+  const id = getRouterParamOrThrow(event, 'id')
 
   const db = useDb()
 
@@ -15,7 +14,7 @@ export default defineEventHandler(async (event) => {
   if (!existingUser)
     throw createError({ statusCode: 404, statusMessage: 'User not found' })
   if (existingUser.role === 'Superadmin')
-    throw createError({ statusCode: 400, statusMessage: 'Cannot reset Superadmin password' })
+    throw createError({ statusCode: 403, statusMessage: 'Cannot reset Superadmin password' })
 
   const [existingAuth] = await db.select().from(auth).where(eq(auth.userId, id)).limit(1)
   if (!existingAuth)

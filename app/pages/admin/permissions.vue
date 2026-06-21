@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PermissionRow, RoleRow } from '#shared/types/admin'
+import { ACTION_LABELS, RESOURCE_GROUPS, RESOURCE_LABELS } from '#shared/utils/permissions'
 
 definePageMeta({
   middleware: async () => {
@@ -133,28 +134,8 @@ function toggleExpandResource(res: string) {
     expandedResources.add(res)
 }
 
-const resourceLabels: Record<string, string> = {
-  user: 'Users',
-  org_unit: 'Organisation Units',
-  job_role: 'Job Roles',
-  inventory: 'Inventory',
-  asset: 'Assets',
-  report: 'Reports',
-}
-
-const actionLabels: Record<string, string> = {
-  create: 'Create',
-  read: 'Read',
-  update: 'Update',
-  delete: 'Delete',
-}
-
-const sectionOrder = ['system', 'domain'] as const
-
-const sectionMeta: Record<string, { label: string, icon: string, resources: readonly string[] }> = {
-  system: { label: 'System Resources', icon: 'i-lucide-shield', resources: ['user', 'org_unit', 'job_role'] },
-  domain: { label: 'Domain Resources', icon: 'i-lucide-blocks', resources: ['inventory', 'asset', 'report'] },
-}
+const sectionOrder = RESOURCE_GROUPS.map(g => g.key)
+const sectionMeta = Object.fromEntries(RESOURCE_GROUPS.map(g => [g.key, g]))
 </script>
 
 <template>
@@ -212,18 +193,19 @@ const sectionMeta: Record<string, { label: string, icon: string, resources: read
           <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-background/80 z-10 rounded-lg">
             <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-muted" />
           </div>
-          <table class="w-full min-w-[640px]">
+          <table class="w-full min-w-[640px]" role="grid" aria-label="Permission matrix">
             <thead>
               <tr class="border-b border-default">
-                <th class="text-left py-3 pr-4 text-sm font-medium text-muted w-44">
+                <th scope="col" class="text-left py-3 pr-4 text-sm font-medium text-muted w-44">
                   Permission
                 </th>
-                <th class="text-left py-3 pr-4 text-sm font-medium text-muted">
+                <th scope="col" class="text-left py-3 pr-4 text-sm font-medium text-muted">
                   Description
                 </th>
                 <th
                   v-for="r in visibleRoles"
                   :key="r.id"
+                  scope="col"
                   class="text-center py-3 px-3 text-sm font-medium text-muted w-28"
                 >
                   <div class="flex flex-col items-center gap-0.5">
@@ -266,7 +248,7 @@ const sectionMeta: Record<string, { label: string, icon: string, resources: read
                           :name="expandedResources.has(res) ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
                           class="size-4 text-muted shrink-0"
                         />
-                        <span class="text-sm font-medium">{{ resourceLabels[res] || res }}</span>
+                        <span class="text-sm font-medium">{{ RESOURCE_LABELS[res] || res }}</span>
                       </div>
                     </td>
                     <td
@@ -286,7 +268,7 @@ const sectionMeta: Record<string, { label: string, icon: string, resources: read
                       class="border-b border-default/50 hover:bg-elevated/50 transition-colors"
                     >
                       <td class="py-2.5 pr-4 text-sm pl-8">
-                        {{ actionLabels[p.action] || p.action }}
+                        {{ ACTION_LABELS[p.action] || p.action }}
                       </td>
                       <td class="py-2.5 pr-4">
                         <span class="text-xs text-muted">{{ p.description || '' }}</span>

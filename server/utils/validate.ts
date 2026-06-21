@@ -1,3 +1,4 @@
+import { getRouterParam } from 'h3'
 import type { H3Event } from 'h3'
 import type { ZodError, ZodType } from 'zod'
 
@@ -38,4 +39,11 @@ export function validateQuery<T>(event: H3Event, schema: ZodType<T>): T {
     })
   }
   return result.data
+}
+
+export function getRouterParamOrThrow(event: H3Event, name: string) {
+  const value = getRouterParam(event, name)
+  if (!value)
+    throw createError({ statusCode: 400, statusMessage: `Missing ${name} parameter` })
+  return value
 }

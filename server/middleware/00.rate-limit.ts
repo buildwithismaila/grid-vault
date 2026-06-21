@@ -1,6 +1,11 @@
 const rules = [
   { path: '/api/auth/login', max: 5, window: 60, ban: 3600 },
   { path: '/api/auth/forgot-password', max: 3, window: 60, ban: 3600 },
+  { path: '/api/auth/reset-password', max: 5, window: 60, ban: 3600 },
+  { path: '/api/auth/accept-invite', max: 5, window: 60, ban: 3600 },
+  { path: '/api/auth/invite', max: 10, window: 60, ban: 3600 },
+  { path: '/api/auth/mfa/verify', max: 5, window: 60, ban: 3600 },
+  { path: '/api/auth/mfa/challenge', max: 5, window: 60, ban: 3600 },
 ]
 
 export default defineEventHandler(async (event) => {

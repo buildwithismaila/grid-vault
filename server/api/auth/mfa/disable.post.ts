@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
   if (!row)
     throw createError({ statusCode: 404, statusMessage: 'Auth record not found' })
   if (!row.mfaEnabled || !row.mfaSecret)
-    throw createError({ statusCode: 400, statusMessage: 'MFA is not enabled' })
+    throw createError({ statusCode: 409, statusMessage: 'MFA is not enabled' })
 
   const valid = await verifyPassword(row.passwordHash, password)
   if (!valid)

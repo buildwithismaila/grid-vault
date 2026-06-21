@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import type { UserRow } from '#shared/types/admin'
+import type { RoleRow, UserRow } from '#shared/types/admin'
 import type { DropdownMenuItem, TableColumn } from '@nuxt/ui'
 import type { SortingState } from '@tanstack/vue-table'
-import { getPaginationRowModel } from '@tanstack/vue-table'
 import { formatEnum } from '#shared/utils'
 
 const { can } = useAuthorization()
 const { onError, toast } = useToastError()
-const table = useTemplateRef('table')
 
 const inviteOpen = ref(false)
 const editOpen = ref(false)
@@ -17,55 +15,52 @@ const deleteOpen = ref(false)
 const selectedUser = ref<UserRow | null>(null)
 const userToDelete = ref<UserRow | null>(null)
 
-const { data: allRoles } = useLazyFetch('/api/rbac/roles', { server: false })
-const roleOptions = computed(() => ((allRoles.value ?? []) as any[]).map((r: any) => r.name))
+const { data: roles } = useLazyFetch('/api/rbac/roles', { server: false })
+const roleOptions = computed(() => ((roles.value ?? []) as any[]).map((r: any) => r.name))
 
+const searchInput = ref('')
 const search = ref('')
 const statusFilter = ref('all')
-const pagination = ref({ pageIndex: 0, pageSize: 15 })
+const page = ref(1)
+const pageSize = ref(15)
 const sorting = ref<SortingState>([])
 
-const { data: users, status: fetchStatus, refresh } = useLazyFetch('/api/admin/users', { server: false })
-const { data: roles } = useLazyFetch('/api/rbac/roles', { server: false })
+let debounceTimer: ReturnType<typeof setTimeout>
+watch(searchInput, (val) => {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    search.value = val
+    page.value = 1
+  }, 300)
+})
+
+const queryParams = computed(() => ({
+  search: search.value,
+  status: statusFilter.value,
+  page: page.value.toString(),
+  limit: pageSize.value.toString(),
+}))
+
+const { data: users, status: fetchStatus, refresh } = useLazyFetch('/api/admin/users', { query: queryParams, server: false } as any)
+
+watch([statusFilter, page, pageSize], () => { refresh() }) // eslint-disable-line style/max-statements-per-line
+
 const { data: orgUnits } = useLazyFetch('/api/org-units', { server: false })
 const { data: jobRoles } = useLazyFetch('/api/job-roles', { server: false })
 
 const loading = computed(() => fetchStatus.value === 'pending' || fetchStatus.value === 'idle')
 
-const filteredUsers = computed(() => {
-  let data = (users.value ?? []) as UserRow[]
-
-  if (statusFilter.value !== 'all') {
-    const statusMap: Record<string, UserRow['status']> = {
-      active: 'ACTIVE',
-      pending: 'PENDING',
-      disabled: 'INACTIVE',
-    }
-    data = data.filter(u => u.status === statusMap[statusFilter.value])
-  }
-
-  if (search.value) {
-    const q = search.value.toLowerCase()
-    data = data.filter(u =>
-      (u.name ?? '').toLowerCase().includes(q)
-      || (u.email ?? '').toLowerCase().includes(q),
-    )
-  }
-
-  return data
-})
-
-const totalCount = computed(() => (users.value ?? []).length)
-const activeCount = computed(() => (users.value ?? []).filter((u: UserRow) => u.status === 'ACTIVE').length)
-const pendingCount = computed(() => (users.value ?? []).filter((u: UserRow) => u.status === 'PENDING').length)
-const disabledCount = computed(() => (users.value ?? []).filter((u: UserRow) => u.status === 'INACTIVE').length)
-
 const statusOptions = computed(() => [
-  { label: 'All', value: 'all', count: totalCount.value },
-  { label: 'Active', value: 'active', count: activeCount.value },
-  { label: 'Pending', value: 'pending', count: pendingCount.value },
-  { label: 'Disabled', value: 'disabled', count: disabledCount.value },
+  { label: 'All', value: 'all', count: users.value?.total ?? 0 },
+  { label: 'Active', value: 'active', count: users.value?.activeCount ?? 0 },
+  { label: 'Pending', value: 'pending', count: users.value?.pendingCount ?? 0 },
+  { label: 'Disabled', value: 'disabled', count: users.value?.disabledCount ?? 0 },
 ])
+
+function onPageSizeChange(v: number) {
+  pageSize.value = v
+  page.value = 1
+}
 
 const columns: TableColumn<UserRow>[] = [
   { id: 'payrollId', accessorKey: 'payrollId', header: 'Payroll ID', enableSorting: true },
@@ -217,15 +212,15 @@ function getActionItems(user: UserRow) {
     </div>
 
     <UserStatCards
-      :total="totalCount"
-      :active="activeCount"
-      :pending="pendingCount"
-      :disabled="disabledCount"
+      :total="users?.total ?? 0"
+      :active="users?.activeCount ?? 0"
+      :pending="users?.pendingCount ?? 0"
+      :disabled="users?.disabledCount ?? 0"
     />
 
     <div class="flex items-center px-4 py-3.5 border-b border-accented justify-between gap-4 w-full overflow-x-auto">
       <div class="flex items-center gap-2 flex-1">
-        <UInput v-model="search" icon="i-lucide-search" placeholder="Search name or email..." class="w-64" />
+        <UInput v-model="searchInput" icon="i-lucide-search" placeholder="Search name or email..." class="w-64" />
       </div>
       <div class="flex items-center gap-2">
         <div class="flex gap-1">
@@ -248,13 +243,10 @@ function getActionItems(user: UserRow) {
     </div>
 
     <UTable
-      ref="table"
-      v-model:pagination="pagination"
       v-model:sorting="sorting"
-      :data="filteredUsers"
+      :data="(users?.data ?? []) as UserRow[]"
       :columns="columns"
       :loading="loading"
-      :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }"
     >
       <template #payrollId-cell="{ row }">
         <span v-if="row.original.payrollId" class="font-mono text-sm">{{ row.original.payrollId }}</span>
@@ -311,7 +303,7 @@ function getActionItems(user: UserRow) {
           v-if="row.original.role !== 'Superadmin'"
           :items="getActionItems(row.original)"
         >
-          <UButton icon="i-lucide-ellipsis" color="neutral" variant="ghost" size="sm" square />
+          <UButton icon="i-lucide-ellipsis" color="neutral" variant="ghost" size="sm" square aria-label="User actions" />
         </UDropdownMenu>
       </template>
 
@@ -330,20 +322,20 @@ function getActionItems(user: UserRow) {
 
     <div class="flex items-center justify-between px-4 py-3">
       <p class="text-sm text-muted">
-        {{ filteredUsers.length }} of {{ users?.length || 0 }} user{{ users?.length !== 1 ? 's' : '' }}
+        {{ users?.data?.length || 0 }} of {{ users?.total || 0 }} user{{ users?.total !== 1 ? 's' : '' }}
       </p>
       <div class="flex items-center gap-2">
         <USelect
-          :model-value="pagination.pageSize"
+          :model-value="pageSize"
           :items="[10, 15, 25, 50]"
           class="w-20"
-          @update:model-value="(v: number) => { pagination.pageSize = v; pagination.pageIndex = 0 }"
+          @update:model-value="onPageSizeChange"
         />
         <UPagination
-          :page="(table?.tableApi?.getState().pagination.pageIndex || 0) + 1"
-          :items-per-page="table?.tableApi?.getState().pagination.pageSize"
-          :total="table?.tableApi?.getFilteredRowModel().rows.length"
-          @update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
+          :page="page"
+          :items-per-page="pageSize"
+          :total="users?.total ?? 0"
+          @update:page="(p: number) => page = p"
         />
       </div>
     </div>
@@ -369,7 +361,7 @@ function getActionItems(user: UserRow) {
   <UserRoleModal
     v-model:open="rolesOpen"
     :user="selectedUser"
-    :roles="(roles ?? []) as any[]"
+    :roles="(roles ?? []) as RoleRow[]"
     :loading="!roles"
     @saved="refresh()"
   />

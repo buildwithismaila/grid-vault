@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import QRCode from 'qrcode'
+import { reactive } from 'vue'
 import { changePasswordSchema } from '#shared/schemas/user'
 
 const toast = useToast()
 const { fieldErrors, globalError, handleApiError, resetErrors } = useFormError()
-const mfaSetupForm = useFormError()
-const mfaDisableForm = useFormError()
+const mfaSetupForm = reactive(useFormError())
+const mfaDisableForm = reactive(useFormError())
 
 const currentPassword = ref('')
 const newPassword = ref('')
@@ -285,7 +286,7 @@ async function disableMfa() {
           <p class="text-sm text-muted text-center">
             Enter your password to generate a security key
           </p>
-          <UAlert v-if="mfaSetupForm.globalError.value" color="error" variant="soft" :title="mfaSetupForm.globalError.value" icon="i-lucide-alert-circle" />
+          <UAlert v-if="mfaSetupForm.globalError" color="error" variant="soft" :title="mfaSetupForm.globalError" icon="i-lucide-alert-circle" />
           <UFormField name="password" label="Password" required>
             <UInput v-model="mfaSetupPassword" type="password" placeholder="Enter your password" class="w-full" />
           </UFormField>
@@ -310,7 +311,7 @@ async function disableMfa() {
             <code class="text-xs bg-elevated px-2 py-1 rounded select-all font-mono">{{ mfaSetupSecret }}</code>
           </div>
 
-          <UAlert v-if="mfaSetupForm.globalError.value" color="error" variant="soft" :title="mfaSetupForm.globalError.value" icon="i-lucide-alert-circle" />
+          <UAlert v-if="mfaSetupForm.globalError" color="error" variant="soft" :title="mfaSetupForm.globalError" icon="i-lucide-alert-circle" />
 
           <UFormField name="code" label="Verification code" required>
             <UInput
@@ -343,7 +344,7 @@ async function disableMfa() {
           <p class="text-sm text-muted text-center">
             Enter your password and an authentication code to confirm
           </p>
-          <UAlert v-if="mfaDisableForm.globalError.value" color="error" variant="soft" :title="mfaDisableForm.globalError.value" icon="i-lucide-alert-circle" />
+          <UAlert v-if="mfaDisableForm.globalError" color="error" variant="soft" :title="mfaDisableForm.globalError" icon="i-lucide-alert-circle" />
           <UFormField name="password" label="Password" required>
             <UInput v-model="mfaDisablePassword" type="password" placeholder="Enter your password" class="w-full" />
           </UFormField>

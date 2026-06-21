@@ -2,7 +2,7 @@ import { eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 import { role, userRole } from '#server/db/schema/rbac'
 import { user } from '#server/db/schema/user'
-import { validateBody } from '#server/utils/validate'
+import { getRouterParamOrThrow, validateBody } from '#server/utils/validate'
 
 const setUserRolesSchema = z.object({
   roleIds: z.array(z.string().uuid()),
@@ -10,9 +10,7 @@ const setUserRolesSchema = z.object({
 
 export default defineEventHandler(async (event) => {
   await requirePermission(event, 'user:update')
-  const id = getRouterParam(event, 'id')
-  if (!id)
-    throw createError({ statusCode: 400, statusMessage: 'Missing user id' })
+  const id = getRouterParamOrThrow(event, 'id')
 
   const db = useDb()
   const body = await validateBody(event, setUserRolesSchema)

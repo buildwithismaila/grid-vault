@@ -25,7 +25,9 @@ watch(() => props.open, async (open) => {
       const userRoles = await $fetch<{ roleId: string }[]>(`/api/rbac/users/${props.user.id}/roles`)
       selectedRoleIds.value = userRoles.map(r => r.roleId)
     }
-    catch { /* no roles yet */ }
+    catch (err) {
+      onError(err, 'Failed to load user roles')
+    }
   }
 })
 

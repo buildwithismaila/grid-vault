@@ -15,7 +15,7 @@ export function useAuthorization() {
     if (user.value.role === 'Superadmin')
       return true
 
-    return permissions.length === 0 || permissions.some(p => user.value?.permissions?.includes(p) ?? false)
+    return permissions.length > 0 && permissions.some(p => user.value?.permissions?.includes(p) ?? false)
   }
 
   function hasRole(roleName: string): boolean {

@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
 
   const valid = await verifyPassword(existing.passwordHash, currentPassword)
   if (!valid)
-    throw createError({ statusCode: 400, statusMessage: 'Current password is incorrect' })
+    throw createError({ statusCode: 403, statusMessage: 'Current password is incorrect' })
 
   const passwordHash = await hashPassword(newPassword)
 

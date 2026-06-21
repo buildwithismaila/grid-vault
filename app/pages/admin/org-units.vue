@@ -175,7 +175,7 @@ function openCreateForTab(tab: string) {
   orgUnitName.value = ''
   orgUnitParentId.value = ''
   if (tab === 'regions') {
-    orgUnitType.value = ''
+    orgUnitType.value = 'REGION'
   }
   else if (tab === 'area-offices') {
     orgUnitType.value = 'AREA_OFFICE'
@@ -307,10 +307,10 @@ async function deleteOrgUnit() {
         <template #actions-cell="{ row }">
           <div class="flex gap-1">
             <UTooltip text="Edit org unit">
-              <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" square @click="openEdit(row.original)" />
+              <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" square aria-label="Edit org unit" @click="openEdit(row.original)" />
             </UTooltip>
             <UTooltip text="Delete org unit">
-              <UButton icon="i-lucide-trash" color="error" variant="ghost" size="sm" square @click="confirmDelete(row.original)" />
+              <UButton icon="i-lucide-trash" color="error" variant="ghost" size="sm" square aria-label="Delete org unit" @click="confirmDelete(row.original)" />
             </UTooltip>
           </div>
         </template>
@@ -340,10 +340,10 @@ async function deleteOrgUnit() {
         <template #actions-cell="{ row }">
           <div class="flex gap-1">
             <UTooltip text="Edit org unit">
-              <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" square @click="openEdit(row.original)" />
+              <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" square aria-label="Edit org unit" @click="openEdit(row.original)" />
             </UTooltip>
             <UTooltip text="Delete org unit">
-              <UButton icon="i-lucide-trash" color="error" variant="ghost" size="sm" square @click="confirmDelete(row.original)" />
+              <UButton icon="i-lucide-trash" color="error" variant="ghost" size="sm" square aria-label="Delete org unit" @click="confirmDelete(row.original)" />
             </UTooltip>
           </div>
         </template>
@@ -376,10 +376,10 @@ async function deleteOrgUnit() {
         <template #actions-cell="{ row }">
           <div class="flex gap-1">
             <UTooltip text="Edit org unit">
-              <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" square @click="openEdit(row.original)" />
+              <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" square aria-label="Edit org unit" @click="openEdit(row.original)" />
             </UTooltip>
             <UTooltip text="Delete org unit">
-              <UButton icon="i-lucide-trash" color="error" variant="ghost" size="sm" square @click="confirmDelete(row.original)" />
+              <UButton icon="i-lucide-trash" color="error" variant="ghost" size="sm" square aria-label="Delete org unit" @click="confirmDelete(row.original)" />
             </UTooltip>
           </div>
         </template>

@@ -1,4 +1,4 @@
-import { and, eq, ilike, inArray, or, sql } from 'drizzle-orm'
+import { and, count, eq, ilike, inArray, or, sql } from 'drizzle-orm'
 import { auth } from '#server/db/schema/auth'
 import { jobRole, orgUnit } from '#server/db/schema/org'
 import { role, userRole } from '#server/db/schema/rbac'
@@ -10,6 +10,9 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const search = (query.search as string) || ''
   const status = (query.status as string) || 'all'
+  const page = Math.max(1, Number.parseInt((query.page as string) || '1', 10) || 1)
+  const limit = Math.min(100, Math.max(1, Number.parseInt((query.limit as string) || '15', 10) || 15))
+  const offset = (page - 1) * limit
 
   const db = useDb()
 
@@ -41,6 +44,16 @@ export default defineEventHandler(async (event) => {
 
   const where = conditions.length > 0 ? and(...conditions) : undefined
 
+  // Get total count matching filters
+  const [totalResult] = await db
+    .select({ count: count() })
+    .from(user)
+    .leftJoin(auth, eq(auth.userId, user.id))
+    .leftJoin(userInvitation, eq(userInvitation.userId, user.id))
+    .where(where)
+
+  const total = totalResult?.count ?? 0
+
   const rows = await db
     .select({
       id: user.id,
@@ -67,6 +80,8 @@ export default defineEventHandler(async (event) => {
     .leftJoin(inviterAlias, eq(userInvitation.invitedByUserId, inviterAlias.id))
     .where(where)
     .orderBy(user.createdAt)
+    .limit(limit)
+    .offset(offset)
 
   const userIds = rows.map(u => u.id)
   const userRoleRows: { userId: string, roleName: string }[] = []
@@ -87,8 +102,26 @@ export default defineEventHandler(async (event) => {
     (userRolesMap[ur.userId] ??= []).push(ur.roleName)
   }
 
-  return rows.map(u => ({
-    ...u,
-    customRoles: (userRolesMap[u.id] || []).filter(name => name !== u.role),
-  }))
+  // Compute status counts from total matching, not from paginated page
+  const [counts] = await db
+    .select({
+      total: count(),
+      activeCount: sql<number>`count(*) FILTER (WHERE ${user.status} = 'ACTIVE')`,
+      pendingCount: sql<number>`count(*) FILTER (WHERE ${user.status} = 'PENDING')`,
+      disabledCount: sql<number>`count(*) FILTER (WHERE ${user.status} = 'INACTIVE')`,
+    })
+    .from(user)
+
+  return {
+    data: rows.map(u => ({
+      ...u,
+      customRoles: (userRolesMap[u.id] || []).filter(name => name !== u.role),
+    })),
+    total,
+    activeCount: counts?.activeCount ?? 0,
+    pendingCount: counts?.pendingCount ?? 0,
+    disabledCount: counts?.disabledCount ?? 0,
+    page,
+    limit,
+  }
 })

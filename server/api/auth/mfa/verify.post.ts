@@ -23,12 +23,12 @@ export default defineEventHandler(async (event) => {
   if (!row)
     throw createError({ statusCode: 404, statusMessage: 'Auth record not found' })
   if (row.mfaEnabled)
-    throw createError({ statusCode: 400, statusMessage: 'MFA already enabled' })
+    throw createError({ statusCode: 409, statusMessage: 'MFA already enabled' })
   if (!row.mfaSecret)
     throw createError({ statusCode: 400, statusMessage: 'No MFA secret found. Run setup first.' })
 
   if (!verifyMFAToken(token, row.mfaSecret))
-    throw createError({ statusCode: 400, statusMessage: 'Invalid verification code' })
+    throw createError({ statusCode: 401, statusMessage: 'Invalid verification code' })
 
   await db.update(auth).set({ mfaEnabled: true }).where(eq(auth.id, row.id))
 

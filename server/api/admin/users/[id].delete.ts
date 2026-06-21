@@ -1,11 +1,10 @@
 import { eq } from 'drizzle-orm'
 import { user } from '#server/db/schema/user'
+import { getRouterParamOrThrow } from '#server/utils/validate'
 
 export default defineEventHandler(async (event) => {
   await requirePermission(event, 'user:delete')
-  const id = getRouterParam(event, 'id')
-  if (!id)
-    throw createError({ statusCode: 400, statusMessage: 'Missing user id' })
+  const id = getRouterParamOrThrow(event, 'id')
 
   const db = useDb()
 
@@ -13,7 +12,7 @@ export default defineEventHandler(async (event) => {
   if (!existing)
     throw createError({ statusCode: 404, statusMessage: 'User not found' })
   if (existing.role === 'Superadmin')
-    throw createError({ statusCode: 400, statusMessage: 'Cannot delete Superadmin' })
+    throw createError({ statusCode: 403, statusMessage: 'Cannot delete Superadmin' })
 
   await db.delete(user).where(eq(user.id, id))
 
